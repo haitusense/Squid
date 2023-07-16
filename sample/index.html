@@ -1,0 +1,156 @@
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+</head>
+
+  <style type="text/css">
+    div { height: 30px; }
+    label { float: left; width: 200px;}
+    input { float: left; width: 200px;}
+  </style>
+
+ <body>
+  <div>sample</div>
+  <div>
+    <input id="id1_in" type="text" name="value" value="default_1"/>
+    <input type="button" value="myfunc1" onclick="myfunc1()"/>
+    <input id="id1_out" type="text" name="value" disabled="disabled"/>
+  </div>
+  <div>
+    <input id="id2_in" type="text" name="value" value="default_2"/>
+    <input type="button" value="hostObjects to MessageBox" onclick="myfunc2()"/>
+  </div>
+  <div>
+    <input id="id3_in" type="text" name="value" value="default_3"/>
+    <input type="button" value="postMessage to Status" onclick="myfunc3()"/>
+  </div>
+  <div>
+    <input id="id4_in" type="text" name="value" value="default_4"/>
+    <input type="button" value="hostObjects to CallProcess" onclick="myfunc4()"/>
+    <input id="id4_out" type="text" name="value" disabled="disabled"/>
+  </div>
+  <div>
+    <input id="id5_in" type="text" name="value" value="default_4"/>
+    <input type="button" value="Write to MM" onclick="myfunc5()"/>
+  </div>
+  <div>
+    <input id="id6_out" type="text" name="value" disabled="disabled"/>
+    <input type="button" value="Read from MM" onclick="myfunc6()"/>
+    <input id="id6_out" type="text" name="value" disabled="disabled"/>
+  </div>
+  <div>
+    <input id="id7_in" type="text" name="value" value="selenium" disabled="disabled"/>
+    <input type="button" value="Call Selenium Process" onclick="myfunc7()"/>
+    <input id="id7_out" type="text" name="value" disabled="disabled"/>
+  </div>
+  <div>
+    <input id="id8_in" type="text" name="value" value="data.raw"/>
+    <input type="button" value="Call OpenCV Process" onclick="myfunc8()"/>
+    <input id="id8_out" type="text" name="value" disabled="disabled"/>
+  </div>
+</body>
+
+<script>
+var red     = '\u001b[31m';
+var green   = '\u001b[32m';
+var yellow  = '\u001b[33m';
+var blue    = '\u001b[34m';
+var reset   = '\u001b[0m';
+
+// addEventListener DOMContentLoaded
+window.addEventListener('DOMContentLoaded', () =>{
+  console.log(green + 'DOMContentLoaded' + reset);
+});
+
+// addEventListener webview message
+if(window.chrome.webview){
+  window.chrome.webview.addEventListener('message', (e) => {
+    var json = JSON.parse(e.data);
+    switch(json.key){
+      case "message":
+        console.log(yellow + json.value + reset);
+        break;
+      case "json":
+        console.log(json.value);        
+        var elm = JSON.parse(json.value); 
+        document.getElementById(elm.id).value = elm.value;
+        break;
+      default:
+        console.log(e.data);
+    } 
+  });
+}
+
+
+// Event
+var myfunc1 = () => {
+  console.log("myfunc1");
+  var src = document.getElementById("id1_in").value;
+  document.getElementById("id1_out").value = src;
+}
+
+var myfunc2 = function(){
+  console.log("myfunc2");
+  var src = document.getElementById("id2_in").value;
+  chrome.webview.hostObjects.Squid.ShowMessageBox('call .net object :' + src);
+}
+
+var myfunc3 = function(){
+  console.log("myfunc3");
+  var elem = document.getElementById("id3_in").value;
+  console.log(elem);
+  window.chrome.webview.postMessage(elem);
+}
+
+// resultはFunc(), 同期的にうごくのでUIはロック。Taskは待ってくれない
+var myfunc4 = async function() {
+  console.log("myfunc4");
+  const squid = chrome.webview.hostObjects.Squid;
+  let result = squid.CallProcessAsync("dotnet", "script ./main.csx", "myfunc4_callback()");
+  result.then((res) => {
+    document.getElementById("id4_out").value = "doing";
+  });
+}
+var myfunc4_callback = () => {
+  console.log("myfunc4 done")
+  document.getElementById("id4_out").value = "done";
+}
+
+
+var myfunc5 = function() {
+  const squid = chrome.webview.hostObjects.Squid;
+  squid.WriteMM(JSON.stringify([4,3,2,1,0]));
+}
+
+var myfunc6 = async function() {
+  const squid = chrome.webview.hostObjects.Squid;
+  let result = await squid.ReadMM();
+  console.log(typeof(result));
+  console.log(result);
+  // result.then((res) => {
+  //   var elem = document.getElementById("id4");
+  //   elem.innerHTML = "doing";
+  // });
+}
+
+var myfunc7 = async function() {
+  console.log("myfunc7");
+  const squid = chrome.webview.hostObjects.Squid;
+  let result = squid.CallProcessAsync("dotnet", "script ./selenium.csx", "myfunc7_callback()");
+  result.then((res) => { document.getElementById("id7_out").value = "doing"; });
+}
+var myfunc7_callback = () => {
+  console.log("myfunc7 done")
+}
+
+var myfunc8 = async function() {
+  console.log("myfunc8");
+  const squid = chrome.webview.hostObjects.Squid;
+  let result = squid.CallProcessAsync("dotnet", "script ./opencv.csx", "myfunc8_callback()");
+  result.then((res) => { document.getElementById("id8_out").value = "doing"; });
+}
+var myfunc8_callback = () => {
+  console.log("myfunc8 done")
+}
+</script>
+</html>
