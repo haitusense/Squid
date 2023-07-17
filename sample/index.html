@@ -4,13 +4,21 @@
 </head>
 
 <style type="text/css">
+  .svg-container {
+    height: 90px;
+    overflow: hidden;
+  }
   div { height: 30px; }
   label { float: left; width: 200px;}
   input { float: left; width: 200px;}
 </style>
 
 <script src="https://unpkg.com/mermaid/dist/mermaid.min.js"></script>
-<script>mermaid.initialize({startOnLoad:true});</script>
+<script>
+  mermaid.initialize({ 
+    startOnLoad:false,
+  });
+</script>
 
 <body>
   <div>sample</div>
@@ -19,6 +27,7 @@
     <input type="button" value="myfunc1" onclick="myfunc1()"/>
     <input id="id1_out" type="text" name="value" disabled="disabled"/>
   </div>
+  <div class="svg-container" id="mermaid"></div>
   <div>
     <input id="id2_in" type="text" name="value" value="default_2"/>
     <input type="button" value="hostObjects to MessageBox" onclick="myfunc2()"/>
@@ -56,14 +65,6 @@
     <input type="button" value="Draw" onclick="myfunc9()"/>
     <canvas id="canvas" width="64" height="48"></canvas>
   </div>
-  <div class="mermaid">
-    flowchart LR
-
-    A[Hard] -->|a| B(Round)
-    B  -->C{Decision}
-    C -->|b| D[Result 1]
-    C -->|c| E[Result 2]
-  </div>
 </body>
 
 <script>
@@ -74,11 +75,17 @@ var blue    = '\u001b[34m';
 var reset   = '\u001b[0m';
 
 // addEventListener DOMContentLoaded
-window.addEventListener('DOMContentLoaded', () =>{
+window.addEventListener('DOMContentLoaded', async () =>{
   console.log(green + 'DOMContentLoaded' + reset);
   
   console.log(green + 'regist memorymap' + reset);
   chrome.webview.hostObjects.Squid.OpenMemoryMap("mmf", 10);
+
+  let graphDefinition = buildgraph("aaa", "black");
+  const { svg } = await mermaid.render('svg_1', graphDefinition);
+  document.getElementById("mermaid").innerHTML = svg;
+  const svgElement = document.getElementById('svg_1');
+  svgElement.setAttribute('height', '100%');
 });
 
 // addEventListener webview message
@@ -90,7 +97,7 @@ if(window.chrome.webview){
         console.log(yellow + json.value + reset);
         break;
       case "json":
-        console.log(json.value);        
+        console.log(json.value);
         var elm = JSON.parse(json.value); 
         document.getElementById(elm.id).value = elm.value;
         break;
@@ -100,12 +107,31 @@ if(window.chrome.webview){
   });
 }
 
+var buildgraph = (val,color) => {
+  return `flowchart LR
+    A[Hard] -->|a| B(${val})
+    B  -->C{Decision}
+    C -->|b| D[Result 1]
+    C -->|c| E[Result 2]
+    style B color:${color}
+  `;
+}
 
 // Event
-var myfunc1 = () => {
+var myfunc1 = async () => {
   console.log("myfunc1");
   var src = document.getElementById("id1_in").value;
   document.getElementById("id1_out").value = src;
+
+  let graphDefinition = buildgraph(src, "red");
+  //   document.getElementById("mermaid_1").textContent = str4;
+  //   await mermaid.run({
+  //     querySelector: '.mermaid',
+  //   });
+  const { svg } = await mermaid.render('svg_1', graphDefinition);
+  document.getElementById("mermaid").innerHTML = svg;
+  const svgElement = document.getElementById('svg_1');
+  svgElement.setAttribute('height', '100%');
 }
 
 var myfunc2 = function(){
@@ -186,5 +212,6 @@ var myfunc9 = async function() {
   }
   ctx.putImageData(imageData, 0, 0);
 }
+
 </script>
 </html>
