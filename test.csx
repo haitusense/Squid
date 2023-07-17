@@ -1,9 +1,16 @@
-using System;
-using System.Collections.Generic;
+
 using System.IO.MemoryMappedFiles;
 using System.Runtime.InteropServices;
 
-namespace Squid;
+var hoge = new MemoryMap<int>("mmf", Enumerable.Range(0, 10).Select(x => x *2).ToArray<int>());
+
+Console.WriteLine(hoge.Length());
+
+var foo = hoge.Read();
+Console.WriteLine(foo[0]);
+Console.WriteLine(foo[1]);
+Console.WriteLine(foo[2]);
+Console.WriteLine(foo[3]);
 
 public class MemoryMap<T> where T : struct {
   MemoryMappedFile mmf;
@@ -34,7 +41,6 @@ public class MemoryMap<T> where T : struct {
       return data;
     }
   }
-  
   public void Write(int[] data)
   {
     using(var accessor = mmf.CreateViewAccessor()){
@@ -43,29 +49,11 @@ public class MemoryMap<T> where T : struct {
     }
   }
   
-  public void Close()
+  
+  public void Clear()
   {
     mmf.Dispose();
     mmf = null;
   }
 
 }
-
-
-  // public static U Serializer<U>(IList<string> args){
-  //   return Parser.Default.ParseArguments<T>(args).WithParsed<T>(op => {
-  //     if(op.json is not null){
-  //       var buf = JsonSerializer.Deserialize<string>($""" "{op.json}" """);
-  //       var dst = JsonSerializer.Deserialize<T>(buf);
-  //       var properties = typeof(T).GetProperties().Where(prop => prop.CanRead && prop.CanWrite);
-  //       foreach (var prop in properties)
-  //       {
-  //         var value = prop.GetValue(dst, null);
-  //         if (value == null) prop.SetValue(dst, prop.GetValue(op, null), null);
-  //       }
-  //       return dst;
-  //     }else{
-  //       return op;
-  //     }
-  //   });
-  // }

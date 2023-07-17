@@ -37,7 +37,7 @@ public class SquidView
   protected internal Action<string> setStatAct;
   protected internal Microsoft.Web.WebView2.Wpf.WebView2 webView;
 
-  protected internal MemoryMap memoryMap;
+  protected internal MemoryMap<int> memoryMap;
   protected internal Task pipe;
 
   private SquidView(){}
@@ -74,11 +74,27 @@ public class SquidView
     pipe.Start();
   }
 
-  protected internal void RunMemoryMap(MainWindow obj, string name){
-    memoryMap = new MemoryMap();
-    memoryMap.Set(name, 10, 10, Enumerable.Range(0, 100).ToArray<int>());
+  public void OpenMemoryMap(string name, int size){
+    memoryMap = new MemoryMap<int>(name, Enumerable.Range(0, size).ToArray<int>());
   }
 
+  public void CloseMemoryMap(){
+    memoryMap.Close();
+  }
+
+  public void WriteMemoryMap(string arrayJson){
+    var src = JsonSerializer.Deserialize<int[]>(arrayJson)!;
+    if(!(memoryMap is null)){
+      memoryMap.Write(src);
+    }
+  }
+
+  public int[] ReadMemoryMap(){
+    if(!(memoryMap is null)){
+      return memoryMap.Read();
+    }
+    return null;
+  }
 
 
   /* To View */
@@ -246,22 +262,4 @@ public class SquidView
     }
   }
   
-
-  public void WriteMM(string arrayJson)
-  {
-    var src = JsonSerializer.Deserialize<int[]>(arrayJson)!;
-    if(!(memoryMap is null)){
-      memoryMap.Write(src);
-    }
-  }
-
-  public int[] ReadMM()
-  {
-    if(!(memoryMap is null)){
-      return memoryMap.Read();
-    }
-    return null;
-  }
-
 }
-

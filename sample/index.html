@@ -3,13 +3,16 @@
   <meta charset="UTF-8">
 </head>
 
-  <style type="text/css">
-    div { height: 30px; }
-    label { float: left; width: 200px;}
-    input { float: left; width: 200px;}
-  </style>
+<style type="text/css">
+  div { height: 30px; }
+  label { float: left; width: 200px;}
+  input { float: left; width: 200px;}
+</style>
 
- <body>
+<script src="https://unpkg.com/mermaid/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({startOnLoad:true});</script>
+
+<body>
   <div>sample</div>
   <div>
     <input id="id1_in" type="text" name="value" value="default_1"/>
@@ -48,6 +51,19 @@
     <input type="button" value="Call OpenCV Process" onclick="myfunc8()"/>
     <input id="id8_out" type="text" name="value" disabled="disabled"/>
   </div>
+
+  <div>
+    <input type="button" value="Draw" onclick="myfunc9()"/>
+    <canvas id="canvas" width="64" height="48"></canvas>
+  </div>
+  <div class="mermaid">
+    flowchart LR
+
+    A[Hard] -->|a| B(Round)
+    B  -->C{Decision}
+    C -->|b| D[Result 1]
+    C -->|c| E[Result 2]
+  </div>
 </body>
 
 <script>
@@ -60,6 +76,9 @@ var reset   = '\u001b[0m';
 // addEventListener DOMContentLoaded
 window.addEventListener('DOMContentLoaded', () =>{
   console.log(green + 'DOMContentLoaded' + reset);
+  
+  console.log(green + 'regist memorymap' + reset);
+  chrome.webview.hostObjects.Squid.OpenMemoryMap("mmf", 10);
 });
 
 // addEventListener webview message
@@ -117,14 +136,14 @@ var myfunc4_callback = () => {
 }
 
 
-var myfunc5 = function() {
+var myfunc5 = async function() {
   const squid = chrome.webview.hostObjects.Squid;
-  squid.WriteMM(JSON.stringify([4,3,2,1,0]));
+  squid.WriteMemoryMap(JSON.stringify([4,3,2,1,0]));
 }
 
 var myfunc6 = async function() {
   const squid = chrome.webview.hostObjects.Squid;
-  let result = await squid.ReadMM();
+  let result = await squid.ReadMemoryMap();
   console.log(typeof(result));
   console.log(result);
   // result.then((res) => {
@@ -151,6 +170,21 @@ var myfunc8 = async function() {
 }
 var myfunc8_callback = () => {
   console.log("myfunc8 done")
+}
+
+var myfunc9 = async function() {
+  console.log("myfunc9");
+  var canvas = document.getElementById('canvas');
+  var ctx = canvas.getContext('2d', { willReadFrequently: true });
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const data = imageData.data;
+  for (var i = 0; i < data.length; i += 4) {
+    data[i]     = 80; // red
+    data[i + 1] = 40; // green
+    data[i + 2] = 40; // blue
+    data[i + 3] = 255; // a
+  }
+  ctx.putImageData(imageData, 0, 0);
 }
 </script>
 </html>

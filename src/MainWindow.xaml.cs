@@ -64,12 +64,6 @@ public partial class MainWindow : Window
       squid.RunPipe(this, op.pipe);
     }
 
-    /* memorymapの登録 */
-    if(!(op.memorymap is null)) {
-      squid.MessageSendToView("enable memorymap");
-      statusLabel.Text = "enable memorymap";
-      squid.RunMemoryMap(this, op.memorymap);
-    }
   }
 
   private void webView_NavigationCompleted(object sender, Microsoft.Web.WebView2.Core.CoreWebView2NavigationCompletedEventArgs e)

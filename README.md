@@ -8,7 +8,7 @@ run debug mode
 
 ```powershell
 > cd src
-> dotnet run -- -d -w "..\sample" -p NamedPipe -m MemoryMap
+> dotnet run -- -d -w "..\sample" -p NamedPipe
 ```
 
 build

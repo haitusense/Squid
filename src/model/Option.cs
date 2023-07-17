@@ -20,9 +20,6 @@ class Options
   public string hostobjects { get; set; }
   
 
-  [Option('m', "memorymap", Required = false, Default = null)]
-  public string memorymap { get; set; }
-
   [Option('p', "pipe", Required = false, Default = null)]
   public string pipe { get; set; }
 
