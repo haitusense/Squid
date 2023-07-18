@@ -91,23 +91,23 @@ window.addEventListener('DOMContentLoaded', async () =>{
 // addEventListener webview message
 if(window.chrome.webview){
   window.chrome.webview.addEventListener('message', (e) => {
-    var json = JSON.parse(e.data);
+    var json = e.data;
+    console.log(json.key);
     switch(json.key){
       case "message":
         console.log(yellow + json.value + reset);
         break;
       case "json":
         console.log(json.value);
-        var elm = JSON.parse(json.value); 
-        document.getElementById(elm.id).value = elm.value;
+        document.getElementById(json.value.id).value = json.value.value;
         break;
       default:
-        console.log(e.data);
+        console.log(e);
     } 
   });
 }
 
-var buildgraph = (val,color) => {
+var buildgraph = (val, color) => {
   return `flowchart LR
     A[Hard] -->|a| B(${val})
     B  -->C{Decision}

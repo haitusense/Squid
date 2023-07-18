@@ -1,31 +1,44 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
-using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 
 using System.Diagnostics;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.IO;
 using System.IO.Pipes;
 
 namespace Squid;
 
-public struct Messenger{
-  public string key{get; set;}
-  public string value{get; set;}
+public enum MessengerType {
+  message,
+  json
+}
 
-  public static Messenger Create(string key, string value){
+public struct Messenger {
+  public MessengerType key { get; set;}
+  public object value { get; set;}
+
+  public static Messenger CreateFromSting(string value){
     return new Messenger(){
-      key = key,
+      key = MessengerType.message,
       value = value
     };
   }
 
+  public static Messenger CreateFromJson(string json){
+    return new Messenger(){
+      key = MessengerType.json,
+      value = JsonSerializer.Deserialize<object>(json)
+    };
+  }
+
   public string ToJson(){
-    return JsonSerializer.Serialize(this);
+    var options = new JsonSerializerOptions();
+    options.Converters.Add(new JsonStringEnumConverter());
+    return JsonSerializer.Serialize(this, options);
   }
 }
 
@@ -60,9 +73,7 @@ public class SquidView
           using var reader = new StreamReader(stream);
           var src = await reader.ReadToEndAsync();
           obj.Dispatcher.Invoke((Action)(() => {
-            // this.MessageSendToView(json.Trim());
-            var json = Messenger.Create("json", src.Trim()).ToJson();
-            webView.CoreWebView2.PostWebMessageAsString(json);
+            JsonSendToView(src.Trim());
           }));        
         }
       }catch(Exception e){
@@ -100,8 +111,15 @@ public class SquidView
   /* To View */
 
   protected internal void MessageSendToView(string val){
-    var json = Messenger.Create("message", val).ToJson();
-    webView.CoreWebView2.PostWebMessageAsString(json);
+    var json = Messenger.CreateFromSting(val).ToJson();
+    webView.CoreWebView2.PostWebMessageAsJson(json);
+    // PostWebMessageAsJson   -> window.chrome.webview.addEventListener('message', (e) => { let json = e.data
+    // PostWebMessageAsString -> window.chrome.webview.addEventListener('message', (e) => { let json = JSON.parse(e.data);
+  }
+
+  protected internal void JsonSendToView(string val){
+    var json = Messenger.CreateFromJson(val).ToJson();
+    webView.CoreWebView2.PostWebMessageAsJson(json);
   }
 
   // set js

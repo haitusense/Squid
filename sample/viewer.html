@@ -1,0 +1,89 @@
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+</head>
+
+<style type="text/css">
+  div { height: 30px; }
+  label { float: left; width: 200px;}
+</style>
+
+<body>
+  <div>
+    <input type="button" value="reset" onclick="reset()"/>
+    <input type="button" value="run" onclick="run()"/>
+  </div>
+  <canvas id="canvas" width="640" height="480"></canvas>
+</body>
+
+<script>
+
+// addEventListener DOMContentLoaded
+window.addEventListener('DOMContentLoaded', async () =>{
+  console.log('DOMContentLoaded');
+  console.log('regist memorymap');
+  chrome.webview.hostObjects.Squid.OpenMemoryMap("mmf", 640*480);
+});
+
+// addEventListener webview message
+if(window.chrome.webview){
+  window.chrome.webview.addEventListener('message', (e) => {
+    var json = e.data;
+    switch(json.key){
+      case "message":
+        console.log(json.value);
+        break;
+      case "json":
+        console.log(json.value);
+        // document.getElementById(json.value.id).value = json.value.value;
+        break;
+      default:
+        console.log(e.data);
+    }
+  });
+}
+
+// Event
+var reset = async function() {
+  var canvas = document.getElementById('canvas');
+  var ctx = canvas.getContext('2d', { willReadFrequently: true });
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const data = imageData.data;
+  for (var i = 0; i < data.length; i += 4) {
+    data[i]     = 0; // red
+    data[i + 1] = 0; // green
+    data[i + 2] = 0; // blue
+    data[i + 3] = 255; // a
+  }
+  ctx.putImageData(imageData, 0, 0);
+}
+
+var draw = async function() {
+  var canvas = document.getElementById('canvas');
+  var ctx = canvas.getContext('2d', { willReadFrequently: true });
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const data = imageData.data;
+
+  const squid = chrome.webview.hostObjects.Squid;
+  let result = await squid.ReadMemoryMap();
+  
+  for (var i = 0; i < data.length; i += 4) {
+    let buf = result[i / 4] > 255 ? 255 : result[i / 4] < 0 ? 0 : result[i / 4]; 
+    data[i]     = buf; // red
+    data[i + 1] = buf; // green
+    data[i + 2] = buf; // blue
+    data[i + 3] = 255; // a
+  }
+  ctx.putImageData(imageData, 0, 0);
+}
+
+var run = async function() {
+  const squid = chrome.webview.hostObjects.Squid;
+  let json = JSON.stringify({ "mmf" : "mmf" });
+  let result = squid.CallProcessAsync("dotnet", `script ./viewer.csx -- "${JSON.stringify(json)}" `, "callback()");
+  result.then((res) => {  });
+}
+var callback = async () => { await draw(); }
+
+</script>
+</html>

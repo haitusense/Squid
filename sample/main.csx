@@ -27,8 +27,7 @@ Console.WriteLine("Press any key to continue");
 Console.ResetColor();
 Console.ReadKey();
 
-class Options
-{
+class Options {
   public static Options Serializer(IList<string> args){
     Options dst = null;
     Parser.Default.ParseArguments<Options>(args).WithParsed<Options>(op => {
