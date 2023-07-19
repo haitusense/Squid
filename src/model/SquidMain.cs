@@ -12,6 +12,8 @@ using System.IO.Pipes;
 
 namespace Squid;
 
+// jsonをArgs等に使用する際、"のエスケープの為、二重にSerialize
+
 public enum MessengerType {
   message,
   json
@@ -42,6 +44,12 @@ public struct Messenger {
   }
 }
 
+/*
+  ExecuteScriptAsync : javascriptの呼び出し
+  await webView.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync :
+    DOM が作成されると、すべてのページで実行される
+*/
+
 [ClassInterface(ClassInterfaceType.AutoDual)]
 [ComVisible(true)]
 public class SquidView
@@ -53,12 +61,16 @@ public class SquidView
   protected internal MemoryMap<int> memoryMap;
   protected internal Task pipe;
 
-  private SquidView(){}
+  private SquidView(){ }
 
   protected internal static SquidView Build(Microsoft.Web.WebView2.Wpf.WebView2 webView, string key){
     var obj = new SquidView();
     obj.webView = webView;
     webView.CoreWebView2.AddHostObjectToScript(key, obj);
+
+    // javascript コードの登録
+    webView.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(""" console.log("add js code from cs") """);
+
     return obj;
   }
 
@@ -122,62 +134,10 @@ public class SquidView
     webView.CoreWebView2.PostWebMessageAsJson(json);
   }
 
-  // set js
-
-  // await webView.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync("window.chrome.webview.addEventListener('message',  function(e) { alert('message received:' + e.data);});");
-    
 
   /* From View */
 
-  // public void MessageReceiveFromView(string path, string src){
-  //   MessageSendToView("MessageReceiveFromView");
-  //   try{
-  //     var obj = JsonSerializer.Deserialize<Messenger>(src);
-      
-  //     switch(obj.key) {
-  //       case "dotnet":
-  //         Task.Run(() =>{
-  //           // "のエスケープの為、二重にSerialize
-  //           var json = JsonSerializer.Serialize(obj.value); 
-  //           ProcessEx.CallProcessAsync("dotnet", $""" script "{path}" -- {json} """);
-  //         }).ContinueWith((e)=> {
-  //           // webView呼べない（落ちる
-  //           webView.Dispatcher.Invoke((Action)(() =>
-  //           {
-  //             webView.CoreWebView2.PostWebMessageAsString("Task End");
-  //           }));
-  //         });
-  //         break;
-  //       case "status":
-  //         setStatAct(obj.value);
-  //         break;
-  //       default:
-  //         MessageSendToView("null obj");
-  //         break;
-  //     }
-  //   }catch(Exception e){
-  //     MessageSendToView(e.ToString());
-  //   }
-
-
-  //     // Task.Run(async () =>{
-  //     //   using (var stream = new NamedPipeServerStream("testpipe")) {
-  //     //     await stream.WaitForConnectionAsync();
-  //     //     using (var reader = new StreamReader(stream)) {
-  //     //       webView.Dispatcher.Invoke((Action)(() =>
-  //     //       {
-  //     //         webView.CoreWebView2.PostWebMessageAsString("Receive");
-  //     //       }));
-  //     //       var message = await reader.ReadLineAsync();
-  //     //       webView.Dispatcher.Invoke((Action)(() =>
-  //     //       {
-  //     //         webView.CoreWebView2.PostWebMessageAsString($"Received: {message}");
-  //     //       }));
-  //     //     }
-  //     //   }
-  //     // });
-
-  // }
+  // private void MainWindow.MessageReceived
 
   public void SetTitle(string src){
     setTitleAct(src switch {
@@ -197,8 +157,6 @@ public class SquidView
     MessageSendToView("closed messagebox");
   }
 
-
-
   public void Navigate(string s)
   {
     if (webView != null && webView.CoreWebView2 != null)
@@ -212,6 +170,10 @@ public class SquidView
     webView.CoreWebView2.OpenDevToolsWindow();
   }
   
+
+  /* call process */
+  // 戻り値を参照する場合は非同期(async/await)で実行
+
   public async void CallProcessAsync(string com, string arg, string callback)
   {
     this.MessageSendToView("CallProcessAsync");
@@ -220,8 +182,9 @@ public class SquidView
     {
       FileName = com, //"dotnet",
       Arguments = arg, //"--info",
-      RedirectStandardOutput = !window,
-      RedirectStandardError = !window,
+      RedirectStandardInput = false,
+      RedirectStandardOutput = false,
+      RedirectStandardError = false,
       UseShellExecute = false,
       CreateNoWindow = !window
     };
@@ -257,7 +220,6 @@ public class SquidView
 
   }
 
-  //戻り値を参照する場合は非同期(async/await)で実行
   public string CallProcess(string com, string arg, bool window = true)
   {
     MessageSendToView("CallProcess");

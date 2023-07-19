@@ -9,6 +9,8 @@ run debug mode
 ```powershell
 > cd src
 > dotnet run -- -d -w "..\sample" -p NamedPipe
+
+> dotnet run -- -d -w "..\sample" -s "viewer.html" -p NamedPipe
 ```
 
 build
