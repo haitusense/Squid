@@ -8,9 +8,9 @@ run debug mode
 
 ```powershell
 > cd src
-> dotnet run -- -d -w "..\sample" -p NamedPipe
+> dotnet run -- -d -w "..\sample"
 
-> dotnet run -- -d -w "..\sample" -s "viewer.html" -p NamedPipe
+> dotnet run -- -d -w "..\sample" -s "viewer.html"
 ```
 
 build
@@ -20,6 +20,9 @@ build
 > dotnet build -c Release
 > .\bin\Release\net7.0-windows\Squid.exe -w "..\sample"
 ```
+
+## Description
+
 
 ## note
 

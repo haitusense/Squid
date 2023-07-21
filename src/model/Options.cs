@@ -10,9 +10,6 @@ class Options
   [Option('s', "starturl", Required = false, Default = @"index.html")]
   public string starturl { get; set; } 
 
-  [Option('r', "received", Required = false, Default = @"main.csx")]
-  public string received { get; set; } 
-
   [Option('w', "working-directory", Required = false)]
   public string working { get; set; } = System.IO.Path.Combine(System.IO.Directory.GetCurrentDirectory(), "");
 
@@ -20,8 +17,11 @@ class Options
   public string hostobjects { get; set; }
   
 
-  [Option('p', "pipe", Required = false, Default = null)]
-  public string pipe { get; set; }
+  // [Option('r', "received", Required = false, Default = @"main.csx")]
+  // public string received { get; set; } 
+
+  // [Option('p', "pipe", Required = false, Default = null)]
+  // public string pipe { get; set; }
 
 }
 

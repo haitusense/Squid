@@ -7,8 +7,6 @@ using System.Windows;
 using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.IO;
-using System.IO.Pipes;
 
 namespace Squid;
 
@@ -58,24 +56,60 @@ public class SquidView
   protected internal Action<string> setStatAct;
   protected internal Microsoft.Web.WebView2.Wpf.WebView2 webView;
 
+  protected internal MainWindow window;
+
   protected internal MemoryMap<int> memoryMap;
-  protected internal Task pipe;
+  protected internal Pipe pipe = new Pipe();
 
-  private SquidView(){ }
+  private SquidView() { }
 
-  protected internal static SquidView Build(Microsoft.Web.WebView2.Wpf.WebView2 webView, string key){
+  protected internal static SquidView Build(MainWindow window, Microsoft.Web.WebView2.Wpf.WebView2 webView, string key){
     var obj = new SquidView();
+    obj.window = window;
     obj.webView = webView;
     webView.CoreWebView2.AddHostObjectToScript(key, obj);
-
+    
     // javascript コードの登録
-    webView.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(""" console.log("add js code from cs") """);
-
+    RegistJavascript.Add(webView);
     return obj;
   }
 
   /* background */
-  protected internal void RunPipe(MainWindow obj, string name){
+  // protected internal void RunPipe(MainWindow obj, string name){
+  //   pipe = new Task(async () =>
+  //   {
+  //     try{
+  //       while (true) {
+  //         using var stream = new NamedPipeServerStream(name);
+  //         await stream.WaitForConnectionAsync();
+  //         using var reader = new StreamReader(stream);
+  //         var src = await reader.ReadToEndAsync();
+  //         obj.Dispatcher.Invoke((Action)(() => {
+  //           JsonSendToView(src.Trim());
+  //         }));        
+  //       }
+  //     }catch(Exception e){
+  //       obj.Dispatcher.Invoke((Action)(() => {
+  //         this.MessageSendToView(e.ToString());
+  //       }));      
+  //     }
+  //   });
+  //   pipe.Start();
+  // }
+
+  public void OpenPipe(string name) => pipe.Run(name,
+    (src) => {
+      window.Dispatcher.Invoke((Action)(() => {
+        this.JsonSendToView(src);
+      }));
+    },
+    (e) => {
+      window.Dispatcher.Invoke((Action)(() => {
+        this.MessageSendToView(e);
+      }));
+    }
+  );
+  /*
     pipe = new Task(async () =>
     {
       try{
@@ -84,17 +118,22 @@ public class SquidView
           await stream.WaitForConnectionAsync();
           using var reader = new StreamReader(stream);
           var src = await reader.ReadToEndAsync();
-          obj.Dispatcher.Invoke((Action)(() => {
+          window.Dispatcher.Invoke((Action)(() => {
             JsonSendToView(src.Trim());
           }));        
         }
       }catch(Exception e){
-        obj.Dispatcher.Invoke((Action)(() => {
+        window.Dispatcher.Invoke((Action)(() => {
           this.MessageSendToView(e.ToString());
         }));      
       }
     });
     pipe.Start();
+    */
+
+  public async void CancelPipe() {
+    await pipe.Cancel();
+    this.MessageSendToView("pipe canceled");
   }
 
   public void OpenMemoryMap(string name, int size){

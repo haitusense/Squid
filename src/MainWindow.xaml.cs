@@ -40,7 +40,7 @@ public partial class MainWindow : Window
     if(op.devtool) { webView.CoreWebView2.OpenDevToolsWindow(); }
 
     /* jsで使用するクラスの登録 */
-    squid = SquidView.Build(webView, op.hostobjects);
+    squid = SquidView.Build(this, webView, op.hostobjects);
     squid.setTitleAct = (n) =>{ this.Title = n; };
     // var label = this.FindName("statusLabel") as System.Windows.Controls.Label;
     // squid.setStatAct = (n) =>{ label.Content = n; };
@@ -58,11 +58,11 @@ public partial class MainWindow : Window
     statusLabel.Text = "Window Loaded";
 
     /* pipeの登録 */
-    if(!(op.pipe is null)) {
-      squid.MessageSendToView("enable namedpipe");
-      statusLabel.Text = "enable namedpipe";
-      squid.RunPipe(this, op.pipe);
-    }
+    // if(!(op.pipe is null)) {
+    //   squid.MessageSendToView("enable namedpipe");
+    //   statusLabel.Text = "enable namedpipe";
+    //   squid.RunPipe(this, op.pipe);
+    // }
 
   }
 
@@ -114,7 +114,4 @@ public partial class MainWindow : Window
   */
 
 }
-
-
-
 

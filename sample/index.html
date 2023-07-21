@@ -14,10 +14,7 @@
 </style>
 
 <script src="https://unpkg.com/mermaid/dist/mermaid.min.js"></script>
-<script>
-  mermaid.initialize({ 
-    startOnLoad:false,
-  });
+<script> mermaid.initialize({  startOnLoad:false, });
 </script>
 
 <body>
@@ -65,21 +62,26 @@
     <input type="button" value="Call R Process" onclick="myfunc9()"/>
     <input id="id9_out" type="text" name="value" disabled="disabled"/>
   </div>
+  <div id="plot_svg" style="height: 180px;">
+  </div>
+  <div>
+    <input id="id10_in" type="text" name="value" disabled="disabled"/>
+    <input type="button" value="Cancel" onclick="myfunc10()"/>
+    <input id="id10_out" type="text" name="value" disabled="disabled"/>
+  </div>
 </body>
 
 <script>
-var red     = '\u001b[31m';
-var green   = '\u001b[32m';
-var yellow  = '\u001b[33m';
-var blue    = '\u001b[34m';
-var reset   = '\u001b[0m';
 
 // addEventListener DOMContentLoaded
 window.addEventListener('DOMContentLoaded', async () =>{
-  console.log(green + 'DOMContentLoaded' + reset);
+  console.log(ConsoleColor.green('DOMContentLoaded'));
   
-  console.log(green + 'regist memorymap' + reset);
+  console.log(ConsoleColor.green('regist memorymap'));
   chrome.webview.hostObjects.Squid.OpenMemoryMap("mmf", 10);
+
+  console.log(ConsoleColor.green('regist pipe'));
+  chrome.webview.hostObjects.Squid.OpenPipe("NamedPipe");
 
   let graphDefinition = buildgraph("aaa", "black");
   const { svg } = await mermaid.render('svg_1', graphDefinition);
@@ -91,17 +93,29 @@ window.addEventListener('DOMContentLoaded', async () =>{
 // addEventListener webview message
 if(window.chrome.webview){
   window.chrome.webview.addEventListener('message', (e) => {
-    var json = e.data;
-    console.log(json.key);
+    let json = e.data;
     switch(json.key){
       case "message":
-        console.log(yellow + json.value + reset);
+        console.log(`from cs ${json.key} : ${ConsoleColor.yellow(json.value)}`);
         break;
       case "json":
+        console.log(`from cs ${json.key}`);
         console.log(json.value);
-        document.getElementById(json.value.id).value = json.value.value;
+        if(json.value.id == "plot_svg"){
+          document.getElementById(json.value.id).innerHTML = json.value.value;
+          const svgElement = document.getElementsByClassName('svglite');
+          svgElement[0].removeAttribute('width');
+          svgElement[0].removeAttribute('height');
+          svgElement[0].setAttribute('position', "absolute");
+          svgElement[0].setAttribute('top', "0");
+          svgElement[0].setAttribute('left', "0");
+          svgElement[0].setAttribute('height', "100%");
+        }else{
+          document.getElementById(json.value.id).value = json.value.value;
+        }
         break;
       default:
+        console.log(`from cs ${json.key}`);
         console.log(e);
     } 
   });
@@ -209,6 +223,11 @@ var myfunc9 = async function() {
 }
 var myfunc9_callback = () => {
   console.log("myfunc9 done")
+}
+
+var myfunc10 = async () => {
+  console.log(green + 'cancel pipe' + reset);
+  await chrome.webview.hostObjects.Squid.CancelPipe();
 }
 </script>
 </html>
