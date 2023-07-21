@@ -102,8 +102,10 @@ if(window.chrome.webview){
         console.log(`from cs ${json.key}`);
         console.log(json.value);
         if(json.value.id == "plot_svg"){
-          document.getElementById(json.value.id).innerHTML = json.value.value;
-          const svgElement = document.getElementsByClassName('svglite');
+          document.getElementById(json.value.id).innerHTML = json.value.value.join().trim();
+
+          // const svgElement = document.getElementById("gridsvg");
+          const svgElement = document.getElementById(json.value.id).children;
           svgElement[0].removeAttribute('width');
           svgElement[0].removeAttribute('height');
           svgElement[0].setAttribute('position', "absolute");

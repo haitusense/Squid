@@ -1,23 +1,17 @@
 library(jsonlite)
 library(ggplot2)
-library(svglite)
-library(readr)
-
-rutil::ex_hello_world()
+library(gridSVG)
+library(XML)
 
 dst <- list(id = "id9_out", value = "form R")
-json <- toJSON(dst)
-json
-rutil::win_named_pipe("NamedPipe", json)
+rsquid::named_pipe("NamedPipe", toJSON(dst))
 
-data <- ggplot(iris, aes(x = Sepal.Length, y = Sepal.Width)) +
-geom_point()
-ggsave("temp.svg", plot = data)
-svg_string <- read_file("temp.svg")
-dst <- list(id = "plot_svg", value = svg_string)
-rutil::win_named_pipe("NamedPipe", toJSON(dst))
+p <- ggplot(iris, aes(x = Sepal.Length, y = Sepal.Width)) + geom_point()
+p
+svg <- saveXML(grid.export(NULL, addClasses = TRUE, prefix = "ggridsvg")$svg)
+dst <- list(id = "plot_svg", value = svg)
+rsquid::named_pipe("NamedPipe", toJSON(dst))
 
-file.remove("temp.svg")
 Sys.sleep(3)
 # readline()やsystem("pause")は機能しない
 # && pause も使えない

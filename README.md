@@ -4,6 +4,8 @@ Customizable Script Launcher
 
 ## Installation and Usage
 
+### 
+
 run debug mode
 
 ```powershell
@@ -20,6 +22,13 @@ build
 > dotnet build -c Release
 > .\bin\Release\net7.0-windows\Squid.exe -w "..\sample"
 ```
+
+When using R language scripts
+
+```R
+R> remotes::install_github("haitusense/rsquid@20230721")
+```
+
 
 ## Description
 
