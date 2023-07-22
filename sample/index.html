@@ -103,15 +103,18 @@ if(window.chrome.webview){
         console.log(json.value);
         if(json.value.id == "plot_svg"){
           document.getElementById(json.value.id).innerHTML = json.value.value.join().trim();
+          // document.getElementById(json.value.id).insertAdjacentHTML("beforeend", json.value.value.join().trim());
+          // document.getElementById(json.value.id).innerHTML = "<svg id='gridsvg'></svg>";
 
-          // const svgElement = document.getElementById("gridsvg");
-          const svgElement = document.getElementById(json.value.id).children;
-          svgElement[0].removeAttribute('width');
-          svgElement[0].removeAttribute('height');
-          svgElement[0].setAttribute('position', "absolute");
-          svgElement[0].setAttribute('top', "0");
-          svgElement[0].setAttribute('left', "0");
-          svgElement[0].setAttribute('height', "100%");
+          const svgElement = document.getElementById("gridsvg");
+          
+          // const svgElement = document.getElementById(json.value.id).children;
+          // svgElement[0].removeAttribute('width');
+          // svgElement[0].removeAttribute('height');
+          // svgElement[0].setAttribute('position', "absolute");
+          // svgElement[0].setAttribute('top', "0");
+          // svgElement[0].setAttribute('left', "0");
+          // svgElement[0].setAttribute('height', "100%");
         }else{
           document.getElementById(json.value.id).value = json.value.value;
         }
