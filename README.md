@@ -26,7 +26,7 @@ build
 When using R language scripts
 
 ```R
-R> remotes::install_github("haitusense/rsquid@20230721")
+R> remotes::install_github("haitusense/rsquid")
 ```
 
 
