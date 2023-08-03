@@ -2,8 +2,8 @@ using CommandLine;
 
 namespace Squid;
 
-class Options
-{
+class Options {
+
   [Option('d', "devtool", Required = false, Default = false)]
   public bool devtool { get; set; }
 
@@ -15,21 +15,23 @@ class Options
 
   [Option('o', "hostobjects-name", Required = false, Default = "Squid")]
   public string hostobjects { get; set; }
-  
 
-  // [Option('r', "received", Required = false, Default = @"main.csx")]
-  // public string received { get; set; } 
-
-  // [Option('p', "pipe", Required = false, Default = null)]
-  // public string pipe { get; set; }
+  // urlエンコードしてのurlパラメータ渡しはあまりキレイでないので
+  [Option('a', "args", Required = false, Default = "{}")]
+  public string args { get; set; }
 
 }
 
 /*
 
-
 public class Options {
   
+  [Option('r', "received", Required = false, Default = @"main.csx")]
+  public string received { get; set; } 
+
+  [Option('p', "pipe", Required = false, Default = null)]
+  public string pipe { get; set; }
+
   [Value(0, MetaName = "JSON", Required = false, Default = null)]
   public string json { get; set; }
 

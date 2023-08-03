@@ -1,0 +1,105 @@
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+</head>
+
+<style type="text/css">
+  div { height: 30px; }
+  label { float: left; width: 200px;}
+  canvas {
+    image-rendering: pixelated;
+  }
+</style>
+
+<body>
+  <div>
+    <input type="button" value="run Mono" onclick="run('mono')"/>
+    <input type="button" value="run RG" onclick="run('bayerRG')"/>
+    <input type="button" value="run GR" onclick="run('bayerGR')"/>
+    <input type="button" value="run BG" onclick="run('bayerBG')"/>
+    <input type="button" value="run GB" onclick="run('bayerGB')"/>
+    <input type="button" value="test" onclick="test()"/>
+  </div>
+  <div>
+    <input type="button" value="plot histogram" onclick="run_plot('histogram')"/>
+    <input type="button" value="run line" onclick="run_plot('line')"/>
+  </div>
+  <canvas id="canvas" width="1" height="1"></canvas>
+  <div id="plot" style="height: 180px;">
+</body>
+
+<script>
+const params = {
+  r : "C:/Program Files/R/R-4.3.1/bin/x64/Rscript.exe",
+  pipe : "NamedPipe",
+  mmf : "mmf",
+  width : 700,
+  height : 700
+};
+
+let canvas = null;
+
+// addEventListener DOMContentLoaded
+window.addEventListener('DOMContentLoaded', async () =>{
+  console.log('DOMContentLoaded');
+  chrome.webview.hostObjects.Squid.OpenMemoryMap(params.mmf, params.width*params.height);
+  chrome.webview.hostObjects.Squid.OpenNamedPipe(params.pipe);
+
+  canvas = document.getElementById('canvas');
+  canvas.width = params.width;
+  canvas.height = params.height;
+});
+
+
+// addEventListener webview message
+SquidJS.setMessageEventListener((json) => {
+  console.log(json);
+  if(json.id == "plot"){
+    document.getElementById(json.id).innerHTML = json.value;
+  }
+});
+
+// Event
+let callback = async () => { await draw("mono"); }
+
+const draw = async (color) => {
+  const squid = chrome.webview.hostObjects.Squid;
+  // let result = await squid.ReadMemoryMap();
+  // SquidJS.DrawFromInt32('canvas', result)
+  await SquidJS.drawFromMemoryMap('canvas', color)
+}
+
+const run = async (color) => {
+  const squid = chrome.webview.hostObjects.Squid;
+  callback = async () => { 
+    console.log("call callback")
+    await draw(color);
+  }
+  const args = Object.assign({ flag : "demosaic" }, params);
+  await squid.CallProcessAsync(
+    "dotnet",
+    `script ./viewer.csx -- ${JSON.stringify(JSON.stringify(args))} `,
+    true,
+    "callback()"
+  );
+  console.log("doing");
+}
+
+var run_plot = async function(flag) {
+  const squid = chrome.webview.hostObjects.Squid;
+  callback = async () => {  }
+  const args = Object.assign({ flag : flag }, params);
+  let a = await squid.CallProcessAsync(
+    params.r, 
+    `./viewer.r ${JSON.stringify(JSON.stringify(args))}`,
+    false,
+    "callback()");
+}
+
+var test = async function() {
+  const squid = chrome.webview.hostObjects.Squid;
+  squid.Set(0, 0, 300, 600);
+}
+
+</script>
+</html>

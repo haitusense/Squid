@@ -8,25 +8,21 @@ namespace Squid;
 /// <summary>
 /// Interaction logic for MainWindow.xaml
 /// </summary>
-public partial class MainWindow : Window
-{
+public partial class MainWindow : Window {
   Options op;
   SquidView squid;
 
-  public MainWindow()
-  {
+  public MainWindow() {
     InitializeComponent();
     Application.Current.DispatcherUnhandledException += OnDispatcherUnhandledException;
   }
 
-  private void OnDispatcherUnhandledException(object sender, System.Windows.Threading.DispatcherUnhandledExceptionEventArgs e)
-  {
+  private void OnDispatcherUnhandledException(object sender, System.Windows.Threading.DispatcherUnhandledExceptionEventArgs e) {
     MessageBox.Show(e.Exception.ToString(), "DispatcherUnhandledException");
     Environment.Exit(1);
   }
 
-  private async void Window_Loaded(object sender, RoutedEventArgs e)
-  {
+  private async void Window_Loaded(object sender, RoutedEventArgs e) {
     op = Parser.Default.ParseArguments<Options>(Environment.GetCommandLineArgs()).MapResult(
       n => n,
       _ => throw new Exception("option err")
@@ -39,23 +35,30 @@ public partial class MainWindow : Window
 
     if(op.devtool) { webView.CoreWebView2.OpenDevToolsWindow(); }
 
+    // await webView.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(""" console.log("add event in cs") """);
+    webView.NavigationCompleted += webView_NavigationCompleted;
+    webView.CoreWebView2.WebMessageReceived += MessageReceived;
+
     /* jsで使用するクラスの登録 */
-    squid = SquidView.Build(this, webView, op.hostobjects);
+    squid = await SquidView.Build(this, webView, op.hostobjects);
+
+    /* jsで使用するjs scriptの登録 */
+    await webView.AddJavascriptAsync(op.args);
     squid.setTitleAct = (n) =>{ this.Title = n; };
     // var label = this.FindName("statusLabel") as System.Windows.Controls.Label;
     // squid.setStatAct = (n) =>{ label.Content = n; };
 
-    webView.NavigationCompleted += webView_NavigationCompleted;
-    webView.CoreWebView2.WebMessageReceived += MessageReceived;
 
     /* 画面遷移 */
+    // await webView.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(""" console.log("navigate in cs") """);
     var working = System.IO.Path.Combine(System.IO.Directory.GetCurrentDirectory(), op.working);
     System.IO.Directory.SetCurrentDirectory(working);
-    squid.MessageSendToView(working);
+    // squid.MessageSendToView(working);
     statusLabel.Text = working;
     webView.CoreWebView2.Navigate(System.IO.Path.Combine(working, op.starturl));
-    squid.MessageSendToView("Window Loaded");
-    statusLabel.Text = "Window Loaded";
+    // squid.MessageSendToView("Window Loaded");
+    // statusLabel.Text = "Window Loaded";
+    // await webView.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(""" console.log("navigated in cs") """);
 
     /* pipeの登録 */
     // if(!(op.pipe is null)) {
@@ -66,15 +69,13 @@ public partial class MainWindow : Window
 
   }
 
-  private void webView_NavigationCompleted(object sender, Microsoft.Web.WebView2.Core.CoreWebView2NavigationCompletedEventArgs e)
-  {
+  private void webView_NavigationCompleted(object sender, Microsoft.Web.WebView2.Core.CoreWebView2NavigationCompletedEventArgs e) {
     squid.MessageSendToView("NavigationCompleted");
     statusLabel.Text = "NavigationCompleted";
     squid.SetTitle(null);
   }
 
-  private /*async*/ void MessageReceived(object sender, CoreWebView2WebMessageReceivedEventArgs args)
-  {
+  private /*async*/ void MessageReceived(object sender, CoreWebView2WebMessageReceivedEventArgs args) {
     string text = args.TryGetWebMessageAsString();
     squid.MessageSendToView($"MessageReceived : {text}");
     
@@ -112,6 +113,7 @@ public partial class MainWindow : Window
       }
     }
   */
+
 
 }
 

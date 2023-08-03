@@ -1,0 +1,78 @@
+<!-- 
+  dotnet run -- -d -w "..\navigate" -a '{"a" : 10}'
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+</head>
+
+<body>
+  <div>navigate</div>
+  <div>
+    <input type="button" value="Click" onclick="test()"/>
+  </div>
+</body>
+
+<script>
+/* order of events.
+
+EnsureCoreWebView2Async()
+OpenDevToolsWindow()
+Add NavigationCompleted Event
+AddHostObjectToScript()
+ 'add cs object'
+AddScriptToExecuteOnDocumentCreatedAsync()
+ 'add js code from cs'
+SetCurrentDirectory();
+Navigate()
+ 'html script start'
+ 'html script end'
+ 'DOMContentLoaded'
+webView_NavigationCompleted()
+ 'NavigationCompleted'
+
+*/
+
+console.log('html script start');
+
+// addEventListener webview message
+if(window.chrome.webview){
+  window.chrome.webview.addEventListener('message', (e) => {
+    let json = e.data;
+    switch(json.key){
+      case "message":
+        console.log(`from cs ${json.key} : ${ConsoleColor.yellow(json.value)}`);
+        break;
+      case "json":
+        console.log(`from cs ${json.key}`);
+        console.log(json.value);
+        break;
+      default:
+        console.log(`from cs ${json.key}`);
+        console.log(e);
+    }
+  });
+}
+
+// addEventListener DOMContentLoaded
+window.addEventListener('DOMContentLoaded', async () =>{
+  console.log('DOMContentLoaded');
+  console.log(SquidJS.args());
+
+  SquidJS.setWindowState({
+    width : 400,
+    // height : 800,
+    left : 300,
+    top : 0
+  })
+
+});
+
+// Event
+var test = async function() {
+  chrome.webview.hostObjects.Squid.Navigate("navigated.html");
+}
+
+console.log('html script end');
+</script>
+</html>

@@ -1,0 +1,56 @@
+
+# control from qmd
+
+vs codeで使用する際、R interactiveを複数起動して使用
+
+## control mermaid from R
+
+```{r}
+system('dotnet.exe run --project "./src" -- -d -w "./sample/4_qmd" -s "mermaid.html"')
+```
+
+```{r}
+dst <- list(id = "mermaid", value = "form R", color = "red")
+rsquid::namedPipe("NamedPipe_mermaid", jsonlite::toJSON(dst))
+```
+
+## control canvas from R
+
+```{r}
+getwd()
+setwd("./src")
+system('dotnet.exe run -- -d -w "../sample/4_qmd" -s "canvas.html"')
+# この場合はカレント(../sample/4_qmd)にdllないと読まないっぽい
+```
+
+```{r}
+width <- 64
+height <- 32
+
+src <- as.integer(rep(100:(height+100), each = width))
+rsquid::writeMemoryMappedFile("mmf_canvas", src)
+
+dst <- list(id = "draw")
+rsquid::namedPipe("NamedPipe_canvas", jsonlite::toJSON(dst))
+```
+
+## add plot from R
+
+```{r}
+system('dotnet.exe run --project "./src" -- -d -w "./sample/4_qmd" -s "plot.html"')
+```
+
+```{r}
+library("ggplot2")
+library("svglite")
+p <- ggplot(iris, aes(x = Sepal.Length, y = Sepal.Width)) + geom_point()
+
+tmp <- tempfile(pattern = "tmp", tmpdir = tempdir(), fileext = ".svg")
+ggsave(tmp, plot = p, width = 16, height = 9)
+svg <- XML::xmlRoot(XML::xmlInternalTreeParse(tmp))
+file.remove(tmp)
+svg <- XML::removeAttributes(svg, "width")
+svg <- XML::addAttributes(svg, "height" = "100%")
+dst <- list(type = "plot", id = "plot_id", svg = XML::saveXML(svg, indent = FALSE))
+rsquid::namedPipe("NamedPipe_plot", jsonlite::toJSON(dst))
+```

@@ -1,0 +1,43 @@
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+</head>
+
+<style type="text/css">
+  canvas {
+    image-rendering: pixelated;
+  }
+</style>
+
+<body>
+  <canvas id="canvas" width="64" height="32"></canvas>
+</body>
+
+<script>
+const params = {
+  pipe : "NamedPipe_canvas",
+  mmf : "mmf_canvas",
+  width : 64,
+  height : 32
+};
+
+// addEventListener DOMContentLoaded
+window.addEventListener('DOMContentLoaded', async () =>{
+  console.log('DOMContentLoaded');
+  chrome.webview.hostObjects.Squid.OpenMemoryMap(params.mmf, params.width*params.height);
+  chrome.webview.hostObjects.Squid.OpenNamedPipe(params.pipe);
+  
+  await SquidJS.drawFromMemoryMap('canvas', 'mono')
+});
+
+// addEventListener webview message
+SquidJS.setMessageEventListener(async (json) => {
+  console.log(json);
+  if(json.id == "draw"){
+    console.log("draw");  
+    await SquidJS.drawFromMemoryMap('canvas', 'mono')
+  }
+});
+
+</script>
+</html>

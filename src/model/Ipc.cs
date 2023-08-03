@@ -9,53 +9,6 @@ using System.IO.Pipes;
 
 namespace Squid;
 
-public class MemoryMap<T> where T : struct {
-  MemoryMappedFile mmf;
-
-  public MemoryMap(string key, T[] src){
-    mmf = MemoryMappedFile.CreateNew(key, sizeof(int) + src.Length * Marshal.SizeOf(typeof(T)));
-    using(var accessor = mmf.CreateViewAccessor()){
-      accessor.Write(0, src.Length);                        // 配列サイズの書き込み
-      accessor.WriteArray(sizeof(int), src, 0, src.Length); // 本体の書き込み
-      // int size = Marshal.SizeOf(src);
-      // accessor.Write(sizeof(int), ref src, size);
-    }
-  }
-
-  public int Length(){
-    using(var accessor = mmf.CreateViewAccessor()){
-      int size = accessor.ReadInt32(0);
-      return size;
-    }
-  }
-
-  public T[] Read()
-  {
-    using(var accessor = mmf.CreateViewAccessor()){
-      int size = accessor.ReadInt32(0); // サイズの読み込み
-      var data = new T[size];
-      accessor.ReadArray<T>(sizeof(int), data, 0, data.Length);
-      return data;
-    }
-  }
-  
-  public void Write(int[] data)
-  {
-    using(var accessor = mmf.CreateViewAccessor()){
-      accessor.Write(0, data.Length);
-      accessor.WriteArray<int>(sizeof(int), data, 0, data.Length);
-    }
-  }
-  
-  public void Close()
-  {
-    mmf.Dispose();
-    mmf = null;
-  }
-
-}
-
-
 public class Pipe {
   protected internal Task task = null;
   CancellationTokenSource tokenSource;
@@ -109,3 +62,70 @@ public class Pipe {
   }
 
 }
+
+
+public class MemoryMap {
+
+  protected MemoryMappedFile mmf;
+
+  public int Length(){
+    using(var accessor = mmf.CreateViewAccessor()){
+      int size = accessor.ReadInt32(0);
+      return size;
+    }
+  }
+
+  public void Close()
+  {
+    mmf.Dispose();
+    mmf = null;
+  }
+
+  public virtual dynamic Read() => null;
+
+  public virtual void Write(dynamic data) { }
+
+}
+
+
+public class MemoryMap<T> : MemoryMap where T : struct {
+
+  public MemoryMap(string key, int size){
+    mmf = MemoryMappedFile.CreateNew(key, sizeof(int) + size * Marshal.SizeOf(typeof(T)));
+    using(var accessor = mmf.CreateViewAccessor()){
+      accessor.Write(0, size);                        // 配列サイズの書き込み
+    }
+  }
+
+  public MemoryMap(string key, T[] src){
+    mmf = MemoryMappedFile.CreateNew(key, sizeof(int) + src.Length * Marshal.SizeOf(typeof(T)));
+    using(var accessor = mmf.CreateViewAccessor()){
+      accessor.Write(0, src.Length);                        // 配列サイズの書き込み
+      accessor.WriteArray(sizeof(int), src, 0, src.Length); // 本体の書き込み
+      // int size = Marshal.SizeOf(src);
+      // accessor.Write(sizeof(int), ref src, size);
+    }
+  }
+
+  public override dynamic Read() => (dynamic)_Read();
+
+  public T[] _Read() {
+    using(var accessor = mmf.CreateViewAccessor()){
+      int size = accessor.ReadInt32(0); // サイズの読み込み
+      var data = new T[size];
+      accessor.ReadArray<T>(sizeof(int), data, 0, data.Length);
+      return data;
+    }
+  }
+  
+  public override void Write(dynamic data) => _Write(data);
+
+  public void _Write(T[] data) {
+    using(var accessor = mmf.CreateViewAccessor()){
+      accessor.Write(0, data.Length);
+      accessor.WriteArray<T>(sizeof(int), data, 0, data.Length);
+    }
+  }
+
+}
+

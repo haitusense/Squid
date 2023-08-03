@@ -1,0 +1,113 @@
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+</head>
+
+<style type="text/css">
+  div { height: 30px; }
+  label { float: left; width: 200px;}
+  canvas {
+    image-rendering: pixelated;
+  }
+  #stalker {
+    pointer-events: none;
+    position: fixed;
+    top: 12px;
+    left: 18px;
+    transform: translate(0, 0);
+    background: #eee;
+    z-index: 800;
+  }
+</style>
+
+<body>
+  <div>
+    <input type="button" value="run Mono" onclick="read_image('mono')"/>
+  </div>
+  <div>
+    <input type="button" value="plot histogram" onclick="run_plot('histogram')"/>
+    <input type="button" value="run line" onclick="run_plot('line')"/>
+  </div>
+  <div id="stalker"></div>
+  <canvas id="canvas" width="700" height="700"></canvas>
+  <div id="plot" style="height: 180px;">
+</body>
+
+<script>
+const params = {
+  pipe : "NamedPipe",
+  mmf : "mmf",
+  width : 700,
+  height : 700
+};
+let callback = async () => { console.log("callback") }
+
+// addEventListener DOMContentLoaded
+window.addEventListener('DOMContentLoaded', async () =>{
+  console.log('DOMContentLoaded');
+  console.log('regist memorymap');
+  chrome.webview.hostObjects.Squid.OpenMemoryMap(params.mmf, 700*700);
+  chrome.webview.hostObjects.Squid.OpenNamedPipe(params.pipe);
+
+  read_image("mono");
+
+});
+
+function pick(event, destination) {
+  var x = event.layerX;
+  var y = event.layerY;
+  var pixel = ctx.getImageData(x, y, 1, 1);
+  var data = pixel.data;
+
+  const rgba = `rgba(${data[0]}, ${data[1]}, ${data[2]}, ${data[3] / 255})`;
+  // destination.style.background = rgba;
+  // destination.textContent = rgba;
+  var stalker = document.getElementById('stalker');
+  stalker.textContent = rgba;
+  return rgba;
+}
+var canvas = document.getElementById('canvas');
+canvas.addEventListener('mousemove', function(event) {
+  pick(event, hoveredColor);
+});
+
+// addEventListener webview message
+SquidJS.setMessageEventListener((json) => {
+  console.log(json);
+  if(json.id == "plot"){
+    document.getElementById(json.id).innerHTML = json.value;
+  }
+});
+
+// Event
+const draw = async function(color) {
+  const squid = chrome.webview.hostObjects.Squid;
+  // let result = await squid.ReadMemoryMap();
+  // SquidJS.DrawFromInt32('canvas', result)
+  await SquidJS.DrawFromMemoryMap('canvas', color)
+}
+const read_image = async function(color) {
+  const squid = chrome.webview.hostObjects.Squid;
+  callback = async () => { await draw(color); }
+  const args = Object.assign({ flag : "demosaic" }, params);
+  let result = await squid.CallProcessAsync(
+    "dotnet",
+    `script ./viewer.csx -- ${JSON.stringify(JSON.stringify(args))} `,
+    true,
+    "callback()");
+  console.log(result);
+}
+
+const run_plot = async function(flag) {
+  const squid = chrome.webview.hostObjects.Squid;
+  callback = async () => {  }
+  const args = Object.assign({ flag : flag }, params);
+  let result = squid.CallProcessAsync(
+    "C:/Program Files/R/R-4.3.1/bin/x64/Rscript.exe", 
+    `./viewer.r ${JSON.stringify(JSON.stringify(args))}`,
+    "callback()");
+  result.then((res) => {  });
+}
+
+</script>
+</html>

@@ -1,0 +1,28 @@
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+</head>
+
+<body>
+  <div>plot</div>
+  <div id="plot_id" style="height: 320px;"></div>
+</body>
+
+<script>
+const params = {
+  pipe : "NamedPipe_plot"
+};
+
+// addEventListener webview message
+SquidJS.setMessageEventListener(async (json) => {
+  console.log(json);
+  document.getElementById(json.id).innerHTML = json.svg
+});
+
+
+window.addEventListener('DOMContentLoaded', async () =>{
+  chrome.webview.hostObjects.Squid.OpenNamedPipe(params.pipe);
+});
+
+</script>
+</html>

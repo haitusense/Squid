@@ -1,0 +1,90 @@
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+</head>
+
+<style type="text/css">
+  .svg-container {
+    height: 90px;
+    overflow: hidden;
+  }
+</style>
+
+<script src="https://unpkg.com/mermaid/dist/mermaid.min.js"></script>
+
+<body>
+  <div>mermaid</div>
+  <div>
+    <input type="button" value="click" onclick="myfunc1()"/>
+  </div>
+  <div id="mermaid1"></div>
+  <div id="mermaid2"></div>
+</body>
+
+<script>
+const params = {
+  pipe : "NamedPipe_mermaid"
+};
+mermaid.initialize({ startOnLoad: false });
+
+// addEventListener webview message
+SquidJS.setMessageEventListener(async (json) => {
+  console.log(json);
+  await drawMermaid("svg_1", buildgraph(json.value, json.color), document.getElementById('mermaid1'));
+});
+
+const buildgraph = (val, color) => {
+  return `flowchart LR
+    A[Hard] -->|a| B(${val})
+    B  -->C{Decision}
+    C -->|b| D[Result 1]
+    C -->|c| E[Result 2]
+    style B color:${color}
+  `;
+}
+
+const buildgantt = (val) => {
+  return `gantt
+    title work
+    dateFormat YYYY-MM-DD
+
+    section work_A
+    準備    :a1 ,2019-12-12 ,1h
+    作業    :a2 ,after a1 ,3h
+    リリース :a3 ,after a2 ,2h
+
+    section work_B
+    準備    :b1 ,after a2 ,3h
+    作業_1  :b2 ,after b1 ,4h
+    作業_2  :b3 ,after b1 ,3h
+    リリース :b4 ,after b2 ,1h
+  `;
+}
+
+const drawMermaid = async (id, graphDefinition, container) => {
+  /* mermaidAPIはdeprecated  */
+  let { svg: svg_str, bindFunctions: bf } = await mermaid.render(id, graphDefinition);
+  container.innerHTML = svg_str;
+  container.setAttribute('height', '100%');
+}
+
+window.addEventListener('DOMContentLoaded', async () =>{
+  chrome.webview.hostObjects.Squid.OpenNamedPipe(params.pipe);
+
+  let graphDefinition1 = buildgraph("a", "black");
+  await drawMermaid("svg_1", graphDefinition1, document.getElementById('mermaid1'));
+  
+  let graphDefinition2 = buildgantt(null);
+  await drawMermaid("svg_2", graphDefinition2, document.getElementById('mermaid2'));
+});
+
+var myfunc1 = async () => {
+  let graphDefinition = buildgraph("def", "red");
+  await drawMermaid("svg_1", graphDefinition, document.getElementById('mermaid1'));
+}
+
+
+
+
+</script>
+</html>

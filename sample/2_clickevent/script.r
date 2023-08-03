@@ -3,7 +3,10 @@ library(ggplot2)
 library(gridSVG)
 library(XML)
 
-dst <- list(id = "id9_out", value = "form R")
+args <- jsonlite::fromJSON(commandArgs()[6])
+args
+
+dst <- list(id = args$id, value = "form R")
 rsquid::namedPipe("NamedPipe", toJSON(dst))
 
 pdf(NULL) # Rplots.pdf の作成を抑制
