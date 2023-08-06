@@ -1,3 +1,9 @@
+<!-- 
+  canvasの高速化
+  1. 透過をやめる
+    var ctx = canvas.getContext('2d', { alpha: false })
+  2. CSS 座標変換を使用してキャンバスを拡大縮小する  
+-->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -6,20 +12,40 @@
 <style type="text/css">
   canvas {
     image-rendering: pixelated;
+    position: absolute;
+  }
+  #ui-layer { z-index: 3; }
+  #canvas { z-index: 2; }
+  #background-layer { z-index: 1; }
+  #stage {
+    width: 160px;
+    height: 120px;
+    position: relative;
+    /* border: 2px solid black; */
+    transform-origin: 0px 0px;
+    transform: scale(1)
   }
 </style>
 
 <body>
-  <canvas id="canvas" width="64" height="32"></canvas>
+  <div id="stage">
+    <!-- <canvas id="ui-layer" width="480" height="320"></canvas> -->
+    <canvas id="canvas" width="160" height="120"></canvas>
+    <!-- <canvas id="background-layer" width="480" height="320"></canvas> -->
+  </div>
 </body>
+
 
 <script>
 const params = {
   pipe : "NamedPipe_canvas",
   mmf : "mmf_canvas",
-  width : 64,
-  height : 32
+  width : 160,
+  height : 120
 };
+
+let canvas_scale = 1;
+let canvas_bitshift = 0; 
 
 // addEventListener DOMContentLoaded
 window.addEventListener('DOMContentLoaded', async () =>{
@@ -28,6 +54,49 @@ window.addEventListener('DOMContentLoaded', async () =>{
   chrome.webview.hostObjects.Squid.OpenNamedPipe(params.pipe);
   
   await SquidJS.drawFromMemoryMap('canvas', 'mono')
+});
+
+window.addEventListener('load', async () =>{
+  console.log('load');
+
+  document.getElementById("canvas").addEventListener('mousewheel', async (event)=>{
+    if (event.shiftKey) {
+      event.preventDefault();
+      console.log(`Shift + ${event.wheelDelta}`);
+      if (event.wheelDelta > 0) {
+        canvas_bitshift += 1;
+      } else {
+        canvas_bitshift -= 1;
+      }
+      await SquidJS.drawFromMemoryMap('canvas', 'mono', canvas_bitshift);
+      // console.log(`bishift ${canvas_bitshift}`)
+      window.chrome.webview.postMessage(`x${canvas_scale} shift ${canvas_bitshift}`);
+    } else if(event.ctrlKey) {
+      event.preventDefault();
+      console.log(`Ctrl + ${event.wheelDelta}`);
+      if (event.wheelDelta > 0) {
+        canvas_scale *= 1.2;
+      } else {
+        canvas_scale /= 1.2;
+      }
+      stage.style.transform = `scale(${canvas_scale})`;
+      window.chrome.webview.postMessage(`x${canvas_scale} shift ${canvas_bitshift}`);
+    } else {
+      // console.log(`${event.wheelDelta}`)
+    }
+
+  });
+
+  document.getElementById("canvas").addEventListener('mousemove', async (event) => {
+    // parseInt()はバグの温床
+    var x = Math.trunc(event.layerX / canvas_scale);
+    var y = Math.trunc(event.layerY / canvas_scale);
+    
+    let result = await chrome.webview.hostObjects.Squid.ReadMemoryMapSingle(x + y * 120);
+    console.log(`${x} - ${y} : ${result}`)
+    window.chrome.webview.postMessage(`${x} - ${y} : ${result} x${canvas_scale} shift ${canvas_bitshift}`);
+  });
+
 });
 
 // addEventListener webview message

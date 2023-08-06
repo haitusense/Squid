@@ -83,6 +83,8 @@ public class MemoryMap {
 
   public virtual dynamic Read() => null;
 
+  public virtual dynamic Read(int index) => null;
+
   public virtual void Write(dynamic data) { }
 
 }
@@ -109,12 +111,24 @@ public class MemoryMap<T> : MemoryMap where T : struct {
 
   public override dynamic Read() => (dynamic)_Read();
 
+  public override dynamic Read(int index) => (dynamic)_Read(index);
+
   public T[] _Read() {
     using(var accessor = mmf.CreateViewAccessor()){
       int size = accessor.ReadInt32(0); // サイズの読み込み
-      var data = new T[size];
-      accessor.ReadArray<T>(sizeof(int), data, 0, data.Length);
-      return data;
+      var dst = new T[size];
+      accessor.ReadArray<T>(sizeof(int), dst, 0, dst.Length);
+      return dst;
+    }
+  }
+
+  public T _Read(int index) {
+    using(var accessor = mmf.CreateViewAccessor()){
+      int size = accessor.ReadInt32(0);
+      T dst = default;
+      if(index < size)
+        accessor.Read<T>(sizeof(int) + index * Marshal.SizeOf(typeof(T)), out dst);
+      return dst;
     }
   }
   

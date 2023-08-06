@@ -10,8 +10,11 @@
   }
 </style>
 
+<!--
+  mermaid 10.3.0
+  mermaidAPIはdeprecated, mermaid.renderを使用
+ -->
 <script src="https://unpkg.com/mermaid/dist/mermaid.min.js"></script>
-
 <body>
   <div>mermaid</div>
   <div>
@@ -62,7 +65,7 @@ const buildgantt = (val) => {
 }
 
 const drawMermaid = async (id, graphDefinition, container) => {
-  /* mermaidAPIはdeprecated  */
+
   let { svg: svg_str, bindFunctions: bf } = await mermaid.render(id, graphDefinition);
   container.innerHTML = svg_str;
   container.setAttribute('height', '100%');
@@ -82,9 +85,6 @@ var myfunc1 = async () => {
   let graphDefinition = buildgraph("def", "red");
   await drawMermaid("svg_1", graphDefinition, document.getElementById('mermaid1'));
 }
-
-
-
 
 </script>
 </html>

@@ -28,6 +28,8 @@ Navigate()
  'html script start'
  'html script end'
  'DOMContentLoaded'
+ image,css read
+ 'load'
 webView_NavigationCompleted()
  'NavigationCompleted'
 
@@ -66,6 +68,10 @@ window.addEventListener('DOMContentLoaded', async () =>{
     top : 0
   })
 
+});
+
+window.addEventListener('load', async () =>{
+  console.log('load');
 });
 
 // Event

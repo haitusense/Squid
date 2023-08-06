@@ -41,23 +41,24 @@ public static class RegistJavascript {
   """;
 
   public static string draw = """
-    SquidJS.drawFromMemoryMap = async (id, color) => {
-      let canvas = document.getElementById(id);
-      let ctx = canvas.getContext('2d', { willReadFrequently: true });
+    SquidJS.drawFromMemoryMap = async (id, color, bitshift) => {
+      const canvas = document.getElementById(id);
+      const ctx = canvas.getContext('2d', { willReadFrequently: true, alpha: false });
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const data = imageData.data;
 
-      let dst = await chrome.webview.hostObjects.Squid.Demosaicing(canvas.width, canvas.height, color);
-      let clamp = new Uint8ClampedArray(dst);
-      // let hoge = dst[i] > 255 ? 255 : dst[i] < 0 ? 0 : src[i]; 
+      const dst = await chrome.webview.hostObjects.Squid.Demosaicing(canvas.width, canvas.height, color, bitshift);
+      const clamp = new Uint8ClampedArray(dst);
+      // let hoge = dst[i] > 255 ? 255 : dst[i] < 0 ? 0 : src[i];   
 
-      let n = 0;
-      for (let i = 0; i < clamp.length; i+=3) {
-        data[n++] = clamp[i];     // red
-        data[n++] = clamp[i + 1]; // green
-        data[n++] = clamp[i + 2]; // blue
-        data[n++] = 255;          // a
-      }
+      imageData.data.set(clamp);
+      // let n = 0;
+      // let data = imageData.data;
+      // for (let i = 0; i < clamp.length; i+=4) {
+      //   data[n++] = clamp[i];     // red
+      //   data[n++] = clamp[i + 1]; // green
+      //   data[n++] = clamp[i + 2]; // blue
+      //   data[n++] = clamp[i + 3]; // a
+      // }
       
       ctx.putImageData(imageData, 0, 0);
     }
@@ -76,28 +77,7 @@ public static class RegistJavascript {
       )
     }
 
-    SquidJS.showMessageBox = (obj) => {
-      chrome.webview.hostObjects.Squid.SetWindowState(
-        obj.left,
-        obj.top,
-        obj.width,
-        obj.height
-      )
-    }
 
-    SquidJS.test = async () => {
-      const squid = chrome.webview.hostObjects.Squid;
-        await squid.Test();
-        await squid.Test("aa");
-        await squid.Test("aa", "bb");
-      var objLiteral = {
-        a : "John Doe",
-        b : 30,
-        c : 20.4
-       };
-      // await squid.Test("aaa", "bbb", JSON.stringify(objLiteral));
-      await squid.Test("aaa", "bbb", objLiteral);
-    }
   """;
 
   public static async Task<string> AddJavascriptAsync(this Microsoft.Web.WebView2.Wpf.WebView2 webView, string args) {

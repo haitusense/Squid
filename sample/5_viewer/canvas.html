@@ -1,0 +1,265 @@
+<!-- 
+  canvasの高速化
+  1. 透過をやめる
+    var ctx = canvas.getContext('2d', { alpha: false })
+  2. CSS 座標変換を使用してキャンバスを拡大縮小する  
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+</head>
+
+<style type="text/css">
+  canvas {
+    image-rendering: pixelated;
+    position: absolute;
+  }
+  #ui-layer { z-index: 3; }
+  #canvas { z-index: 2; }
+  #background-layer { z-index: 1; }
+  #stage {
+    width: 160px;
+    height: 120px;
+    position: relative;
+    /* border: 2px solid black; */
+    transform-origin: 0px 0px;
+    transform: scale(1)
+  }
+  #stalker {
+    pointer-events: none;
+    position: fixed;
+    top: 12px;
+    left: 18px;
+    transform: translate(0, 0);
+    transform-origin: 0px 0px;
+    background: #eee;
+    z-index: 800;
+  }
+</style>
+
+<body>
+  <div id="stalker">aaa</div>
+  <div id="stage">
+    <!-- <canvas id="ui-layer" width="480" height="320"></canvas> -->
+    <canvas id="canvas" width="160" height="120"></canvas>
+    <!-- <canvas id="background-layer" width="480" height="320"></canvas> -->
+  </div>
+</body>
+
+
+<script>
+const params = {
+  pipe : "NamedPipe_canvas",
+  mmf : "mmf_canvas",
+  width : 160,
+  height : 120
+};
+
+// addEventListener DOMContentLoaded
+window.addEventListener('DOMContentLoaded', async () =>{
+  console.log('DOMContentLoaded');
+  chrome.webview.hostObjects.Squid.OpenMemoryMap(params.mmf, params.width*params.height);
+  chrome.webview.hostObjects.Squid.OpenNamedPipe(params.pipe);
+  
+  await SquidJS.drawFromMemoryMap('canvas', 'mono')
+});
+
+let canvas_scale = 1;
+let canvas_bitshift = 0; 
+
+window.addEventListener('load', async () =>{
+  console.log('load');
+
+  document.getElementById("canvas").addEventListener('mousewheel', async (event)=>{
+    if (event.shiftKey) {
+      event.preventDefault();
+      console.log(`Shift + ${event.wheelDelta}`);
+      if (event.wheelDelta > 0) {
+        canvas_bitshift += 1;
+      } else {
+        canvas_bitshift -= 1;
+      }
+      await SquidJS.drawFromMemoryMap('canvas', 'mono', canvas_bitshift);
+      // console.log(`bishift ${canvas_bitshift}`)
+      window.chrome.webview.postMessage(`x${canvas_scale} shift ${canvas_bitshift}`);
+    } else if(event.ctrlKey) {
+      event.preventDefault();
+      console.log(`Ctrl + ${event.wheelDelta}`);
+      if (event.wheelDelta > 0) {
+        canvas_scale *= 1.2;
+      } else {
+        canvas_scale /= 1.2;
+      }
+      stage.style.transform = `scale(${canvas_scale})`;
+      window.chrome.webview.postMessage(`x${canvas_scale} shift ${canvas_bitshift}`);
+    } else {
+      // console.log(`${event.wheelDelta}`)
+    }
+
+  });
+
+  document.getElementById("canvas").addEventListener('mousemove', async (event) => {
+    // parseInt()はバグの温床
+    // 非標準 : ayerX/layerY
+    let x = Math.trunc(event.layerX / canvas_scale);
+    let y = Math.trunc(event.layerY / canvas_scale);
+
+    
+    // let result = await chrome.webview.hostObjects.Squid.ReadMemoryMapSingle(x + y * 120);
+    // let result_rgba = ctx.getImageData(x, y, 1, 1).data;
+
+    // console.log(`${x} - ${y} : ${result}`)
+    // window.chrome.webview.postMessage(`${x} - ${y} : ${result} x${canvas_scale} shift ${canvas_bitshift}`);
+    window.chrome.webview.postMessage(`${x} - ${y} ${event.screenX} ${event.screenY}`);
+    // stalker.textContent = rgba;
+    stalker.style.transform = `translate(${event.clientX + 8}px, ${event.clientY + 8}px)`
+    stalker.textContent = `${x} - ${y} ${event.screenX} ${event.screenY}`;
+  });
+
+});
+
+// addEventListener webview message
+SquidJS.setMessageEventListener(async (json) => {
+  console.log(json);
+  if(json.id == "draw"){
+    console.log("draw");  
+    await SquidJS.drawFromMemoryMap('canvas', 'mono')
+  }
+});
+
+
+const setCanvas1 =()=> {
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+  const image = new Image();
+  const MAX_SCALE = 5;
+  const SCALE_STEP = 0.2;
+  let imageScale = 1, imageScaleIndex = 0;
+
+  let mouseX, mouseY, press = false;
+  let mouseMoveX, mouseMoveY, mouseDragX, mouseDragY;
+
+  let zoomWidth, zoomHeight, zoomLeft = 0, zoomTop = 0;
+  let zoomLeftBuf = 0, zoomTopBuf = 0;
+
+  canvas.addEventListener('mousewheel', canvasZoom);
+  canvas.addEventListener('mouseover', disableScroll);
+  canvas.addEventListener('mouseout', enableScroll);
+
+  canvas.addEventListener('mousedown', function(){
+    // マウスが押下された瞬間の情報を記録
+    zoomLeftBuf = zoomLeft;
+    zoomTopBuf = zoomTop;
+    press = true;
+  });
+  canvas.addEventListener('mouseup', ()=>{ press = false; });
+  canvas.addEventListener('mouseout', ()=>{ press = false; });
+  canvas.addEventListener('mousemove', mouseMove );
+
+  function draw() {
+    image.addEventListener("load", function(){
+      ctx.drawImage(image, zoomLeft, zoomTop, canvas.width / imageScale, canvas.height / imageScale, 0, 0, canvas.width, canvas.height);
+
+      // ctx.font = '30px "arial black"';
+      // ctx.fillStyle = 'white';
+      // ctx.fillText('x' + imageScale.toFixed(1), 390, 300);
+      // ctx.strokeStyle = 'black';
+      // ctx.lineWidth = 2;
+      // ctx.strokeText('x' + imageScale.toFixed(1), 390, 300);
+      
+      // 枠の描画
+      ctx.lineWidth = 3;
+      ctx.strokeRect(0, 0, canvas.width, canvas.height);
+        
+    });
+    image.src = "https://kano.arkoak.com/images/harinezumi.jpg";
+  }
+
+  function canvasZoom(e) {
+    let rect = e.target.getBoundingClientRect();
+    mouseX = e.clientX - rect.left;
+    mouseY = e.clientY - rect.top;
+      
+    if (e.wheelDelta > 0) {
+      imageScaleIndex++;
+      imageScale = 1 + imageScaleIndex * SCALE_STEP;
+      if (imageScale > MAX_SCALE) {
+        imageScale = MAX_SCALE;
+        imageScaleIndex--;
+      } else {
+        zoomWidth = canvas.width / imageScale;
+        zoomHeight = canvas.height / imageScale;
+          
+        zoomLeft += mouseX * SCALE_STEP / (imageScale * (imageScale - SCALE_STEP));
+        zoomLeft = Math.max(0, Math.min(canvas.width - zoomWidth, zoomLeft));
+
+        zoomTop += mouseY * SCALE_STEP / (imageScale * (imageScale - SCALE_STEP));
+        zoomTop = Math.max(0, Math.min(canvas.height - zoomHeight, zoomTop));
+      }
+    } else {
+      imageScaleIndex--;
+      imageScale = 1 + imageScaleIndex * SCALE_STEP;
+      if (imageScale < 1) {
+        imageScale = 1;
+        zoomLeft = 0;
+        zoomTop = 0;
+        imageScaleIndex = 0;
+      } else {
+        zoomWidth = canvas.width / imageScale;
+        zoomHeight = canvas.height / imageScale;
+
+        zoomLeft -= mouseX * SCALE_STEP / (imageScale * (imageScale + SCALE_STEP));
+        zoomLeft = Math.max(0, Math.min(canvas.width - zoomWidth, zoomLeft));
+              
+        zoomTop -= mouseY * SCALE_STEP / (imageScale * (imageScale + SCALE_STEP));
+        zoomTop = Math.max(0, Math.min(canvas.height - zoomHeight, zoomTop));
+      }
+    }
+      
+    draw();
+  }
+
+  function mouseMove(e) {
+    let rect = e.target.getBoundingClientRect();
+    if (press) {
+      // ドラッグ処理
+      mouseDragX = e.clientX - rect.left;
+      mouseDragY = e.clientY - rect.top;
+          
+      zoomLeft = zoomLeftBuf + (mouseMoveX - mouseDragX) / imageScale;
+      zoomLeft = Math.max(0, Math.min(canvas.width - zoomWidth, zoomLeft));
+
+      zoomTop = zoomTopBuf + (mouseMoveY - mouseDragY) / imageScale;
+      zoomTop = Math.max(0, Math.min(canvas.height - zoomHeight, zoomTop));
+      draw();
+    } else {
+      mouseMoveX = e.clientX - rect.left;
+      mouseMoveY = e.clientY - rect.top;    
+    }
+  }
+
+  function disableScroll() {document.addEventListener("mousewheel", scrollControl, { passive: false });}
+  function enableScroll() {document.removeEventListener("mousewheel", scrollControl, { passive: false });}
+  function scrollControl(e) {e.preventDefault();}
+
+  draw();
+}
+
+
+
+</script>
+</html>
+
+<!-- 
+
+    chrome.webview.hostObjects.Squid.OpenMemoryMap("mmf", 10, "int");
+
+  document.getElementById("mermaid").innerHTML = svg;
+  const svgElement = document.getElementById('svg_1');
+  svgElement.setAttribute('height', '100%');
+
+  const squid = chrome.webview.hostObjects.Squid;
+  let result = squid.CallProcessAsync("dotnet", "script ./opencv.csx", "myfunc8_callback()");
+  result.then((res) => { document.getElementById("id8_out").value = "doing"; });
+
+ -->

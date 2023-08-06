@@ -189,27 +189,43 @@ public class SquidView {
     return null;
   }
 
+  public dynamic ReadMemoryMapSingle(int index){
+    if(!(memoryMap is null)){
+      return memoryMap.Read(index);
+    }
+    return null;
+  }
+
   /* Image */
-  public ushort[] Demosaicing(int width, int height, string type) {
+  public ushort[] Demosaicing(int width, int height, string type, int bitshift = 0) {
     var src_uint16 = memoryMap.Read() switch {
       byte[] a => a.Select(n => (UInt16)n).ToArray<UInt16>(),
-      int[] a => a.Select(n => n > UInt16.MaxValue ? (UInt16)UInt16.MaxValue : n < 0 ? (UInt16)0 : (UInt16)n).ToArray<UInt16>(),
+      int[] a => a.Select(m => {
+        var n = bitshift >= 0 ? m >> bitshift : m << -1 * bitshift;
+        return n > UInt16.MaxValue ? (UInt16)UInt16.MaxValue : n < 0 ? (UInt16)0 : (UInt16)n;
+      }).ToArray<UInt16>(),
       double[] a => a.Select(n => n > UInt16.MaxValue ? (UInt16)UInt16.MaxValue : n < 0 ? (UInt16)0 : (UInt16)n).ToArray<UInt16>(),
       _=> throw new Exception() 
     };
-    var dst = new ushort[width * height * 3];
+
+    var dst_bgr = new ushort[width * height * 3];
+    var dst_bgra = new ushort[width * height * 4];
+    var alpha = Enumerable.Repeat<ushort>(UInt16.MaxValue, width * height).ToArray();
 
     using(var mat_src = new Mat(height, width, MatType.CV_16UC1, src_uint16)) 
-    using(var mat_dst = new Mat(height, width, MatType.CV_16UC3, dst)) {
+    using(var mat_bgr = new Mat(height, width, MatType.CV_16UC3, dst_bgr))
+    using(var mat_alpha = new Mat(height, width, MatType.CV_16UC1, alpha))
+    using(var mat_bgra = new Mat(height, width, MatType.CV_16UC4, dst_bgra)) {
       switch(type) {
-        case "bayerRG" : Cv2.Demosaicing(mat_src, mat_dst, ColorConversionCodes.BayerRG2BGR); break;
-        case "bayerGR" : Cv2.Demosaicing(mat_src, mat_dst, ColorConversionCodes.BayerGR2BGR); break;
-        case "bayerBG" : Cv2.Demosaicing(mat_src, mat_dst, ColorConversionCodes.BayerBG2BGR); break;
-        case "bayerGB" : Cv2.Demosaicing(mat_src, mat_dst, ColorConversionCodes.BayerGB2BGR); break;
-        case "mono" : Cv2.Merge(new Mat[]{mat_src, mat_src, mat_src}, mat_dst); break;
-        default: Cv2.Merge(new Mat[]{mat_src, mat_src, mat_src}, mat_dst); break;
+        case "bayerRG" : Cv2.Demosaicing(mat_src, mat_bgr, ColorConversionCodes.BayerRG2BGR); break;
+        case "bayerGR" : Cv2.Demosaicing(mat_src, mat_bgr, ColorConversionCodes.BayerGR2BGR); break;
+        case "bayerBG" : Cv2.Demosaicing(mat_src, mat_bgr, ColorConversionCodes.BayerBG2BGR); break;
+        case "bayerGB" : Cv2.Demosaicing(mat_src, mat_bgr, ColorConversionCodes.BayerGB2BGR); break;
+        case "mono" : Cv2.Merge(new Mat[]{mat_src, mat_src, mat_src}, mat_bgr); break;
+        default: Cv2.Merge(new Mat[]{mat_src, mat_src, mat_src}, mat_bgr); break;
       }
-      return dst;
+      Cv2.Merge(new Mat[]{mat_bgr, mat_alpha}, mat_bgra);
+      return dst_bgra;
     }
   }
 
