@@ -49,6 +49,7 @@ tmp <- tempfile(pattern = "tmp", tmpdir = tempdir(), fileext = ".svg")
 ggsave(tmp, plot = p, width = 16, height = 9)
 svg <- XML::xmlRoot(XML::xmlInternalTreeParse(tmp))
 file.remove(tmp)
+
 svg <- XML::removeAttributes(svg, "width")
 svg <- XML::addAttributes(svg, "height" = "100%")
 dst <- list(type = "plot", id = "plot_id", svg = XML::saveXML(svg, indent = FALSE))
@@ -60,9 +61,24 @@ rsquid::namedPipe("NamedPipe_plot", jsonlite::toJSON(dst))
 ```{r}
 library("ggplot2")
 library("svglite")
-p <- ggplot(iris, aes(x = Sepal.Length, y = Sepal.Width)) + geom_point()
+library("imager")
+library("dplyr")
 
+width <- 160
+height <- 120
+
+value <- as.integer(rep(1:height, each = width))
+src <- rsquid::as.image.data.frame(value, width, height)
+# plot(as.cimg(src))
+
+rsquid::writeMemoryMappedFile("mmf_canvas", src)
+dst <- list(id = "draw")
+rsquid::namedPipe("NamedPipe_canvas", dst)
+
+p <- ggplot(filter(src, 30 == x), aes(y, value)) + geom_point()
+#  p
 svg <- rsquid::ggsave2svg(plot = p, width = 16, height = 9)
+
 svg <- XML::removeAttributes(svg, "width")
 svg <- XML::addAttributes(svg, "height" = "100%")
 dst <- list(type = "plot", id = "plot_id", svg = XML::saveXML(svg, indent = FALSE))

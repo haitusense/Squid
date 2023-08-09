@@ -112,7 +112,7 @@ const myfunc1 = async () => {
 const myfunc2_1 = () => {
   console.log("myfunc2");
   var src = document.getElementById("id2-1_in").value;
-  chrome.webview.hostObjects.Squid.ShowLiteMessageBox('call .net object :' + src);
+  chrome.webview.hostObjects.Squid.ShowMessageBoxLite('call .net object :' + src);
 }
 const myfunc2_2 = async () => {
   console.log("myfunc2");

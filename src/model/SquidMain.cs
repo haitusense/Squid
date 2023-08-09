@@ -260,7 +260,7 @@ public class SquidView {
     setStatAct(src);
   }
 
-  public void ShowLiteMessageBox(string s) {
+  public void ShowMessageBoxLite(string s) {
     MessageSendToView("show messagebox");
     MessageBox.Show(s);
     MessageSendToView("closed messagebox");
@@ -278,7 +278,11 @@ public class SquidView {
   public void Navigate(string url) {
     MessageSendToView($"{url}");
     if (webView != null && webView.CoreWebView2 != null) {
-      webView.CoreWebView2.Navigate(System.IO.Path.Combine(System.IO.Directory.GetCurrentDirectory(), url));
+      if (Uri.IsWellFormedUriString(url, UriKind.Absolute)){
+        webView.CoreWebView2.Navigate(url);
+      }else{
+        webView.CoreWebView2.Navigate(System.IO.Path.Combine(System.IO.Directory.GetCurrentDirectory(), url));
+      }
     }
   }
 

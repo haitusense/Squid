@@ -10,20 +10,21 @@
 </head>
 
 <style type="text/css">
-  canvas {
+  #ui-layer { z-index: 3; }
+  #canvas { 
     image-rendering: pixelated;
     position: absolute;
+    z-index: 2; 
   }
-  #ui-layer { z-index: 3; }
-  #canvas { z-index: 2; }
   #background-layer { z-index: 1; }
   #stage {
-    width: 160px;
-    height: 120px;
     position: relative;
     /* border: 2px solid black; */
     transform-origin: 0px 0px;
-    transform: scale(1)
+    transform: scale(1);
+    margin-left: auto;
+    margin-right: auto;
+    margin-top: 50px;
   }
   #stalker {
     pointer-events: none;
@@ -41,7 +42,7 @@
   <div id="stalker">aaa</div>
   <div id="stage">
     <!-- <canvas id="ui-layer" width="480" height="320"></canvas> -->
-    <canvas id="canvas" width="160" height="120"></canvas>
+    <canvas id="canvas"></canvas>
     <!-- <canvas id="background-layer" width="480" height="320"></canvas> -->
   </div>
 </body>
@@ -51,69 +52,90 @@
 const params = {
   pipe : "NamedPipe_canvas",
   mmf : "mmf_canvas",
-  width : 160,
-  height : 120
+  width : 700,
+  height : 700,
+  maxsize : 2073600 //1920x1080
+};
+
+const cnv_params = {
+  scale : 1,
+  bitshift : 0,
+  color : true
 };
 
 // addEventListener DOMContentLoaded
 window.addEventListener('DOMContentLoaded', async () =>{
   console.log('DOMContentLoaded');
-  chrome.webview.hostObjects.Squid.OpenMemoryMap(params.mmf, params.width*params.height);
+  chrome.webview.hostObjects.Squid.OpenMemoryMap(params.mmf, params.maxsize);
   chrome.webview.hostObjects.Squid.OpenNamedPipe(params.pipe);
   
-  await SquidJS.drawFromMemoryMap('canvas', 'mono')
+  // await SquidJS.drawFromMemoryMap('canvas', 'mono', 0)
 });
-
-let canvas_scale = 1;
-let canvas_bitshift = 0; 
 
 window.addEventListener('load', async () =>{
   console.log('load');
 
-  document.getElementById("canvas").addEventListener('mousewheel', async (event)=>{
+  await readRaw();
+
+  canvas.addEventListener('mousewheel', async (event)=>{
     if (event.shiftKey) {
       event.preventDefault();
       console.log(`Shift + ${event.wheelDelta}`);
       if (event.wheelDelta > 0) {
-        canvas_bitshift += 1;
+        cnv_params.bitshift += 1;
       } else {
-        canvas_bitshift -= 1;
+        cnv_params.bitshift -= 1;
       }
-      await SquidJS.drawFromMemoryMap('canvas', 'mono', canvas_bitshift);
+      await SquidJS.drawFromMemoryMap('canvas', 'mono', cnv_params.bitshift);
       // console.log(`bishift ${canvas_bitshift}`)
-      window.chrome.webview.postMessage(`x${canvas_scale} shift ${canvas_bitshift}`);
+      window.chrome.webview.postMessage(`x${cnv_params.scale} shift ${cnv_params.bitshift}`);
     } else if(event.ctrlKey) {
       event.preventDefault();
       console.log(`Ctrl + ${event.wheelDelta}`);
       if (event.wheelDelta > 0) {
-        canvas_scale *= 1.2;
+        cnv_params.scale *= 1.2;
       } else {
-        canvas_scale /= 1.2;
+        cnv_params.scale /= 1.2;
       }
-      stage.style.transform = `scale(${canvas_scale})`;
-      window.chrome.webview.postMessage(`x${canvas_scale} shift ${canvas_bitshift}`);
+      stage.style.transform = `scale(${cnv_params.scale})`;
+      window.chrome.webview.postMessage(`x${cnv_params.scale} shift ${cnv_params.bitshift}`);
     } else {
       // console.log(`${event.wheelDelta}`)
     }
 
   });
 
-  document.getElementById("canvas").addEventListener('mousemove', async (event) => {
-    // parseInt()はバグの温床
-    // 非標準 : ayerX/layerY
-    let x = Math.trunc(event.layerX / canvas_scale);
-    let y = Math.trunc(event.layerY / canvas_scale);
-
+  canvas.addEventListener('mousemove', async (event) => {
+    // parseInt():バグの温床, ayerX/layerY:非標準
+    let x = Math.trunc(event.layerX / cnv_params.scale);
+    let y = Math.trunc(event.layerY / cnv_params.scale);
     
-    // let result = await chrome.webview.hostObjects.Squid.ReadMemoryMapSingle(x + y * 120);
-    // let result_rgba = ctx.getImageData(x, y, 1, 1).data;
+    let dst = null;
+    if(cnv_params.color){
+      let ctx = canvas.getContext('2d', { alpha: false });
+      let result_rgba = ctx.getImageData(x, y, 1, 1).data;
+      dst = `R${result_rgba[0]},G${result_rgba[1]},B${result_rgba[2]}`
+    }else{
+      let result_mono = await chrome.webview.hostObjects.Squid.ReadMemoryMapSingle(x + y * params.width);
+      dst = `${result_mono}`
+    }
 
-    // console.log(`${x} - ${y} : ${result}`)
-    // window.chrome.webview.postMessage(`${x} - ${y} : ${result} x${canvas_scale} shift ${canvas_bitshift}`);
+    stalker.style.transform = `translate(${event.clientX}px, ${event.clientY}px)`
+    stalker.textContent = `(${x},${y}) ${dst}`;
     window.chrome.webview.postMessage(`${x} - ${y} ${event.screenX} ${event.screenY}`);
-    // stalker.textContent = rgba;
-    stalker.style.transform = `translate(${event.clientX + 8}px, ${event.clientY + 8}px)`
-    stalker.textContent = `${x} - ${y} ${event.screenX} ${event.screenY}`;
+    // window.chrome.webview.postMessage(`${x} - ${y} : ${result} x${canvas_scale} shift ${canvas_bitshift}`);
+
+  });
+
+  window.addEventListener('keydown', async (event) => {
+    console.log(`key ${event.keyCode}`)
+    // if (event.isComposing || event.keyCode === 229) {
+    //   return;
+    // }
+    if (event.altKey && event.keyCode === 67) {
+      cnv_params.color = !cnv_params.color;
+      await callback()
+    }
   });
 
 });
@@ -122,11 +144,35 @@ window.addEventListener('load', async () =>{
 SquidJS.setMessageEventListener(async (json) => {
   console.log(json);
   if(json.id == "draw"){
-    console.log("draw");  
-    await SquidJS.drawFromMemoryMap('canvas', 'mono')
+    console.log("draw");
+    await callback();
   }
 });
 
+const readRaw = async ()=>{
+  const squid = chrome.webview.hostObjects.Squid;
+  
+  stage.style.width = params.width;
+  stage.style.height = params.height;
+  canvas.width = params.width;
+  canvas.height = params.height;
+
+  const args = Object.assign({ flag : "demosaic" }, params);
+    await squid.CallProcessAsync(
+    "dotnet",
+    `script ./viewer.csx -- ${JSON.stringify(JSON.stringify(args))} `,
+    true,
+    "callback()"
+  );
+}
+const callback = async () => {
+  const squid = chrome.webview.hostObjects.Squid;
+  if(cnv_params.color){
+    await SquidJS.drawFromMemoryMap('canvas', 'bayerGR', cnv_params.bitshift)
+  }else{
+    await SquidJS.drawFromMemoryMap('canvas', 'mono', cnv_params.bitshift)
+  }
+}
 
 const setCanvas1 =()=> {
   const canvas = document.getElementById('canvas');

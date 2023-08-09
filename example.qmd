@@ -1,0 +1,92 @@
+javascriptは
+i = i +1
+hoge|0
+が速いらしい。整数型明示とかどうするんやろ
+
+
+```{r}
+dst <- list(id = "id9_out", value = "form R")
+rsquid::namedPipe("NamedPipe", toJSON(dst))
+```
+
+```{r}
+remotes::install_github("extendr/helloextendr", force=T)
+```
+
+
+
+
+```{r}
+remove.packages("rsquid")
+install.packages("../rsquid/", repos = NULL, type = "source")
+```
+
+
+```{r}
+install.packages("languageserver")
+install.packages("httpgd")
+install.packages("ragg")
+```
+
+```{r}
+install.packages("yaml")
+install.packages("tidyverse")
+install.packages("gridExtra")
+library("glue")
+install.packages("svglite")
+
+```
+
+
+```{r}
+remotes::install_github("haitusense/rsquid", force=T)
+```
+
+```{r}
+width <- 3
+height <- 3
+data <- rep(1:height, each = width)
+x <- rep(1:width, length.out = width * height)
+y <- rep(1:height, each = width)
+df <- data.frame(x = x, y = y, value = data)
+df
+
+# src <- rsquid::as.image.data.frame(data, width, height)
+# src
+```
+
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(gridSVG)
+library(XML)
+
+flag <- "line"
+width <- 700
+height <- 700
+src <- rsquid::readMemoryMappedFile("mmf")
+x <- rep(1:width, length.out = width * height)
+y <- rep(1:height, each = width)
+df <- data.frame(data = src, x = x, y = y)
+head(df)
+
+if (flag == "histogram") {
+  g <- ggplot(plot_data, aes(x = data)) + geom_histogram()
+} else if (flag == "line") {
+  plot_data <- filter(df, 30 <= y & y <= 36)
+  g <- ggplot(plot_data, aes(x, data)) +
+  scale_y_continuous(limits = c(200, 255)) +
+  scale_x_continuous(limits = c(0, 700)) +
+  geom_point() +
+  theme(aspect.ratio = 4)
+}
+g
+svg <- grid.export(NULL, addClasses = TRUE, prefix = "gridsvg", indent = FALSE)$svg
+xml <- saveXML(svg, indent=FALSE)
+print(nchar(xml))
+```
+
+```{r}
+rsquid::namedPipe("NamedPipe", ' { "id" : "id8_out", "value" : "abcde" }')
+```

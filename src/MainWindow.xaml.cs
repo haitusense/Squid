@@ -55,7 +55,8 @@ public partial class MainWindow : Window {
     System.IO.Directory.SetCurrentDirectory(working);
     // squid.MessageSendToView(working);
     statusLabel.Text = working;
-    webView.CoreWebView2.Navigate(System.IO.Path.Combine(working, op.starturl));
+    // webView.CoreWebView2.Navigate(System.IO.Path.Combine(working, op.starturl));
+    squid.Navigate(op.starturl);
     // squid.MessageSendToView("Window Loaded");
     // statusLabel.Text = "Window Loaded";
     // await webView.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(""" console.log("navigated in cs") """);
