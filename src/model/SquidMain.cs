@@ -3,6 +3,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Collections.Generic;
 
 using System.Diagnostics;
 using System.Text.Json;
@@ -20,21 +21,22 @@ public enum MessengerType {
 }
 
 public struct Messenger {
-  public MessengerType key { get; set;}
-  public object value { get; set;}
+  public string type { get; set;}
+  public object payload { get; set;}
 
   public static Messenger CreateFromSting(string value){
     return new Messenger(){
-      key = MessengerType.message,
-      value = value
+      type = MessengerType.message.ToString(),
+      payload = value
     };
   }
 
   public static Messenger CreateFromJson(string json){
-    return new Messenger(){
-      key = MessengerType.json,
-      value = System.Text.Json.JsonSerializer.Deserialize<object>(json)
-    };
+    return System.Text.Json.JsonSerializer.Deserialize<Messenger>(json);
+    // return new Messenger(){
+    //   type = MessengerType.json,
+    //   payload = System.Text.Json.JsonSerializer.Deserialize<object>(json)
+    // };
   }
 
   public string ToJson(){
@@ -42,6 +44,7 @@ public struct Messenger {
     options.Converters.Add(new JsonStringEnumConverter());
     return System.Text.Json.JsonSerializer.Serialize(this, options);
   }
+
 }
 
 /*
@@ -80,11 +83,11 @@ public class SquidView {
 
   private SquidView() { }
 
-  protected internal static async Task<SquidView> Build(MainWindow window, Microsoft.Web.WebView2.Wpf.WebView2 webView, string key){
+  protected internal static async Task<SquidView> Build(MainWindow window, Microsoft.Web.WebView2.Wpf.WebView2 webView, string key, string comment = "SquidView.Build"){
+    await webView.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync($$""" console.log('{{comment}}') """);
     var obj = new SquidView();
     obj.window = window;
     obj.webView = webView;
-    await webView.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(""" console.log("add cs object") """);
     webView.CoreWebView2.AddHostObjectToScript(key, obj);
     return obj;
   }
@@ -298,6 +301,36 @@ public class SquidView {
   }
 
 
+
+  Dictionary<string, string> id = new Dictionary<string, string>();
+  public string GetScriptID(string key) {
+    return id.ContainsKey(key) switch {
+      true => id[key],
+      false => null,
+    };
+  }
+  public async Task<string> AddScript(string key, string code) {
+    if(id.ContainsKey(key)) { 
+      webView.CoreWebView2.RemoveScriptToExecuteOnDocumentCreated(id[key]);
+      id.Remove(key);
+    }
+    var result = await webView.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(code);
+    id.Add(key, result);
+    return result;
+  }
+  public void RemoveScript(string key) {
+    if(id.ContainsKey(key)){
+      webView.CoreWebView2.RemoveScriptToExecuteOnDocumentCreated(id[key]);
+      id.Remove(key);
+    }
+  }
+
+  public async Task<string> AddJS2(string test) {
+    var result = await webView.CoreWebView2.ExecuteScriptAsync(test);
+    return result;
+  }
+  
+  
   /* call process */
   // 戻り値を参照する場合は非同期(async/await)で実行
 
@@ -352,19 +385,20 @@ public class SquidView {
           proc.WaitForExit();
 
           webView.Dispatcher.Invoke((Action)(() => {
-            webView.CoreWebView2.PostWebMessageAsString($"console out : {results}{err}");
+            // webView.CoreWebView2.PostWebMessageAsString($"console out : {results}{err}");
+            this.MessageSendToView($"console out : {results}{err}");
           }));
         }catch(Exception e){
           webView.Dispatcher.Invoke((Action)(() => {
-            webView.CoreWebView2.PostWebMessageAsString($"err : {e}");
+            // webView.CoreWebView2.PostWebMessageAsString();
+            this.MessageSendToView($"err : {e}");
           }));
         }
       }).ContinueWith((e)=> {
         // webView呼べない（落ちる
-        if(callback is null) return;
         webView.Dispatcher.Invoke((Action)(() =>
         {
-          webView.CoreWebView2.ExecuteScriptAsync(callback);
+          if(callback is not null) webView.CoreWebView2.ExecuteScriptAsync(callback);
           // webView.CoreWebView2.ExecuteScriptAsync("document.querySelector(\"body\").style.backgroundColor=\"red\"").ConfigureAwait(false);
         }));
       });
@@ -374,8 +408,7 @@ public class SquidView {
 
   public string CallProcess(string com, string arg, bool window = true) {
     MessageSendToView("CallProcess");
-    var pi = new ProcessStartInfo()
-    {
+    var pi = new ProcessStartInfo() {
       FileName = com, //"dotnet",
       Arguments = arg, //"--info",
       RedirectStandardOutput = !window,
@@ -437,5 +470,6 @@ public class SquidView {
     // }
     return;
   }
-  
+
+
 }

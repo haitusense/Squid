@@ -6,7 +6,7 @@ using OpenQA.Selenium.Chrome;
 
 var dst = Selenium.run("https://github.com/haitusense");
 Console.WriteLine(dst);
-WritePipe("NamedPipe", $$""" { "id" : "id7_out", "value" : "{{dst}}" } """);
+WritePipe("NamedPipe", $$""" { "type" : "text", "payload" : { "id" : "id7_out", "value" : "{{dst}}" } } """);
 
 public class Selenium {
 

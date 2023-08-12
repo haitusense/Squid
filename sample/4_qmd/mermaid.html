@@ -31,9 +31,18 @@ const params = {
 mermaid.initialize({ startOnLoad: false });
 
 // addEventListener webview message
-SquidJS.setMessageEventListener(async (json) => {
-  console.log(json);
-  await drawMermaid("svg_1", buildgraph(json.value, json.color), document.getElementById('mermaid1'));
+window.chrome.webview.addEventListener('message', async (e) => {
+  let json = e.data;
+  switch(json.type){
+    case "message":
+      console.log(`from cs ${json.type} : ${json.payload}`.yellow());
+      break;
+    case "plot":
+      await drawMermaid("svg_1", buildgraph(json.payload.value, json.payload.color), document.getElementById('mermaid1'));
+      break;
+    default:
+      console.log(e);
+  }
 });
 
 const buildgraph = (val, color) => {

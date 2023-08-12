@@ -5,8 +5,7 @@ library(XML)
 
 args <- jsonlite::fromJSON(commandArgs()[6])
 args
-
-dst <- list(id = args$id, value = "form R")
+dst <- list(type = jsonlite::unbox("text"), payload = list(id = args$id, value = "form R"))
 rsquid::namedPipe("NamedPipe", toJSON(dst))
 
 pdf(NULL) # Rplots.pdf の作成を抑制
@@ -17,8 +16,8 @@ svg <- XML::removeAttributes(svg, "width")
 svg <- XML::addAttributes(svg, "height" = "100%")
 svg <- XML::removeChildren(svg, "metadata")
 
-dst <- list(id = "plot_svg", value = saveXML(svg))
-rsquid::namedPipe("NamedPipe", toJSON(dst))
+dst <- list(type = "svg", payload = list(id = args$id, value = saveXML(svg)))
+# rsquid::namedPipe("NamedPipe", toJSON(dst))
 
 Sys.sleep(3)
 # readline()やsystem("pause")は機能しない

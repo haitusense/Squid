@@ -40,10 +40,10 @@ public partial class MainWindow : Window {
     webView.CoreWebView2.WebMessageReceived += MessageReceived;
 
     /* jsで使用するクラスの登録 */
-    squid = await SquidView.Build(this, webView, op.hostobjects);
+    squid = await SquidView.Build(this, webView, op.hostobjects, "loading : add objs form cs".Yellow());
 
     /* jsで使用するjs scriptの登録 */
-    await webView.AddJavascriptAsync(op.args);
+    await webView.AddJavascriptAsync(op.args, "loading : add scripts form cs".Yellow());
     squid.setTitleAct = (n) =>{ this.Title = n; };
     // var label = this.FindName("statusLabel") as System.Windows.Controls.Label;
     // squid.setStatAct = (n) =>{ label.Content = n; };
@@ -71,14 +71,14 @@ public partial class MainWindow : Window {
   }
 
   private void webView_NavigationCompleted(object sender, Microsoft.Web.WebView2.Core.CoreWebView2NavigationCompletedEventArgs e) {
-    squid.MessageSendToView("NavigationCompleted");
+    squid.MessageSendToView("NavigationCompleted".Yellow());
     statusLabel.Text = "NavigationCompleted";
     squid.SetTitle(null);
   }
 
   private /*async*/ void MessageReceived(object sender, CoreWebView2WebMessageReceivedEventArgs args) {
     string text = args.TryGetWebMessageAsString();
-    squid.MessageSendToView($"MessageReceived : {text}");
+    squid.MessageSendToView($"MessageReceived : {text}".Yellow());
     
     // Label.Contentだとアンダーバーがアクセスキーに使用されるので面倒
     statusLabel.Text = text; 

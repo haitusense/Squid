@@ -10,7 +10,7 @@ system('dotnet.exe run --project "./src" -- -d -w "./sample/4_qmd" -s "mermaid.h
 ```
 
 ```{r}
-dst <- list(id = "mermaid", value = "form R", color = "red")
+dst <- list(type = jsonlite::unbox("plot"), payload = list(id = "mermaid", value = "form R", color = "red"))
 rsquid::namedPipe("NamedPipe_mermaid", jsonlite::toJSON(dst))
 ```
 
@@ -30,7 +30,7 @@ height <- 120
 src <- as.integer(rep(50:(height+50), each = width))
 rsquid::writeMemoryMappedFile("mmf_canvas", src)
 
-dst <- list(id = "draw")
+dst <- list(type = jsonlite::unbox("draw"), payload = NULL)
 rsquid::namedPipe("NamedPipe_canvas", jsonlite::toJSON(dst))
 ```
 
@@ -52,35 +52,6 @@ file.remove(tmp)
 
 svg <- XML::removeAttributes(svg, "width")
 svg <- XML::addAttributes(svg, "height" = "100%")
-dst <- list(type = "plot", id = "plot_id", svg = XML::saveXML(svg, indent = FALSE))
+dst <- list(type = jsonlite::unbox("plot"), payload = list(id = "plot_id", value = XML::saveXML(svg, indent = FALSE)))
 rsquid::namedPipe("NamedPipe_plot", jsonlite::toJSON(dst))
-```
-
-### rsquid 0.0.2
-
-```{r}
-library("ggplot2")
-library("svglite")
-library("imager")
-library("dplyr")
-
-width <- 160
-height <- 120
-
-value <- as.integer(rep(1:height, each = width))
-src <- rsquid::as.image.data.frame(value, width, height)
-# plot(as.cimg(src))
-
-rsquid::writeMemoryMappedFile("mmf_canvas", src)
-dst <- list(id = "draw")
-rsquid::namedPipe("NamedPipe_canvas", dst)
-
-p <- ggplot(filter(src, 30 == x), aes(y, value)) + geom_point()
-#  p
-svg <- rsquid::ggsave2svg(plot = p, width = 16, height = 9)
-
-svg <- XML::removeAttributes(svg, "width")
-svg <- XML::addAttributes(svg, "height" = "100%")
-dst <- list(type = "plot", id = "plot_id", svg = XML::saveXML(svg, indent = FALSE))
-rsquid::namedPipe("NamedPipe_plot", dst)
 ```

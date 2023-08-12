@@ -66,41 +66,41 @@
 
 <script>
 
+if(!window.chrome.webview) alert('webview not found');
+
 // addEventListener DOMContentLoaded
 window.addEventListener('DOMContentLoaded', async () =>{
-  console.log(ConsoleColor.green('DOMContentLoaded'));
+  console.log('DOMContentLoaded'.green());
   
-  console.log(ConsoleColor.green('regist memorymap'));
+  console.log('regist memorymap'.green());
   // chrome.webview.hostObjects.Squid.OpenMemoryMap("mmf", 10);
   chrome.webview.hostObjects.Squid.OpenMemoryMap("mmf", 10, "int");
 
-  console.log(ConsoleColor.green('regist pipe'));
+  console.log('regist pipe'.green());
   chrome.webview.hostObjects.Squid.OpenNamedPipe("NamedPipe");
 });
 
 // addEventListener webview message
-if(window.chrome.webview){
-  window.chrome.webview.addEventListener('message', (e) => {
-    let json = e.data;
-    switch(json.key){
-      case "message":
-        console.log(`from cs ${json.key} : ${ConsoleColor.yellow(json.value)}`);
-        break;
-      case "json":
-        console.log(`from cs ${json.key}`);
-        console.log(json.value);
-        if(json.value.id == "plot_svg"){
-          // document.getElementById(json.value.id).innerHTML = json.value.value;
-        }else{
-          document.getElementById(json.value.id).value = json.value.value;
-        }
-        break;
-      default:
-        console.log(`from cs ${json.key}`);
-        console.log(e);
-    }
-  });
-}
+window.chrome.webview.addEventListener('message', (e) => {
+  let json = e.data;
+  switch(json.type){
+    case "message":
+      console.log(`from cs ${json.type} : ${json.payload}`.yellow());
+      break;
+    case "text":
+      console.log(`from cs ${json.type}`);
+      console.log(json.payload);
+      document.getElementById(json.payload.id).value = json.payload.value;
+      break;
+    case "svg":
+      // document.getElementById(json.payload.id).innerHTML = json.payload.value;
+      break;
+    default:
+      console.log(`from cs ${json.type}`);
+      console.log(e);
+  }
+});
+
 
 // Event
 const myfunc1 = async () => {
@@ -117,13 +117,7 @@ const myfunc2_1 = () => {
 const myfunc2_2 = async () => {
   console.log("myfunc2");
   var src = document.getElementById("id2-2_in").value;
-  /*
-    Cancel : 2
-    No     : 7
-    None   : 0
-    OK     : 1
-    Yes    : 6
-  */
+
   let result = await chrome.webview.hostObjects.Squid.ShowMessageBox(
     'call .net object' + src,
     'caption',
@@ -131,6 +125,9 @@ const myfunc2_2 = async () => {
     'Information',
     'OK'
     );
+  /*
+    result = [0 : None, 1 : OK, 2 : Cancel, 6 : OK, 7 : No]
+  */
   document.getElementById("id2-2_out").value = result;
 }
 
@@ -166,8 +163,8 @@ const myfunc5 = async function() {
 const myfunc6 = async function() {
   const squid = chrome.webview.hostObjects.Squid;
   let result = await squid.ReadMemoryMap();
-  // console.log(typeof(result));
   console.log(result);
+  // console.log(typeof(result));
   // result.then((res) => {
   //   var elem = document.getElementById("id4");
   //   elem.innerHTML = "doing";

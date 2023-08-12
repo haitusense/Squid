@@ -8,7 +8,7 @@ library(dplyr)
 args <- jsonlite::fromJSON(commandArgs()[6])
 args
 
-Sys.sleep(5)
+# Sys.sleep(5)
 
 width <- args$width
 height <- args$height
@@ -36,7 +36,7 @@ file.remove(tmp)
 svg <- xmlRoot(svg)
 svg <- XML::removeAttributes(svg, "width")
 svg <- XML::addAttributes(svg, "height" = "100%")
-dst <- list(id = "plot", value = saveXML(svg, indent = FALSE))
+dst <- list(type = jsonlite::unbox("plot"), payload = saveXML(svg, indent = FALSE))
 rsquid::namedPipe(args$pipe, jsonlite::toJSON(dst))
 
-Sys.sleep(5)
+# Sys.sleep(5)

@@ -29,6 +29,8 @@
 </body>
 
 <script>
+if(!window.chrome.webview) alert('webview not found');
+
 const params = {
   r : "C:/Program Files/R/R-4.3.1/bin/x64/Rscript.exe",
   pipe : "NamedPipe",
@@ -50,14 +52,29 @@ window.addEventListener('DOMContentLoaded', async () =>{
   canvas.height = params.height;
 });
 
-
 // addEventListener webview message
-SquidJS.setMessageEventListener((json) => {
-  console.log(json);
-  if(json.id == "plot"){
-    document.getElementById(json.id).innerHTML = json.value;
+window.chrome.webview.addEventListener('message', (e) => {
+  let json = e.data;
+  switch(json.type){
+    case "message":
+      console.log(`from cs ${json.type} : ${json.payload}`.yellow());
+      break;
+    case "csx":
+      console.log(`from csx ${json.payload}`);
+      break;
+    case "text":
+      console.log(json.payload);
+      document.getElementById(json.payload.id).value = json.payload.value;
+      break;
+    case "plot":
+      document.getElementById("plot").innerHTML = json.payload;
+      break;
+    default:
+      console.log(`from cs ${json.type}`);
+      console.log(e);
   }
 });
+
 
 // Event
 let callback = async () => { await draw("mono"); }

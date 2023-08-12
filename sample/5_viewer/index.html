@@ -1,0 +1,105 @@
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+</head>
+
+<body>
+  <div id="cnt"></div>
+  <div>
+    <input type="button" value="Click" onclick="dispatch({ type:'add', payload:'payload' })"/>
+    <input type="button" value="Click" onclick="click_test()"/>
+    <input type="button" value="Click" onclick="click_async()"/>
+  </div>
+</body>
+
+<script>
+
+/*
+ ┌─Process────────┐ IPC   ┌─ActionCreator──┐           ┌─Store───────────┐
+ │                ├──────►│                │           │ OldState Action │
+ └────────────────┘       │   ┌────────┐   │           │        │        │
+         ▲                │   │ Action │   │ Dispatch  │   ┌─── ▼ ───┐   │
+         │ Call           │   └───┬────┘   ├──────────►│   │ Reducer │   │
+         │                │       ▼        │           │   └────┬────┘   │
+ ┌─Container──────┐ Input │     Action     │           │        ▼        │
+ │                ├──────►│                │           │     NewState    │
+ └────────────────┘       └────────────────┘           └────────┬────────┘
+         ▲                                                      │
+         └──────────────────────────────────────────────────────┘
+                                 State
+*/
+
+(async () => {
+  const id1 = await chrome.webview.hostObjects.Squid.GetScriptID("store");
+  const id2 = await chrome.webview.hostObjects.Squid.GetScriptID("initialState");
+  console.log( `${id1} ${id2}` );
+  if(id1) return;
+  
+  const initialState = { busy: false, count: 0 };
+  const reducer = async (state, action) => {
+    console.log(action)
+    switch (action.type) {
+      case 'busy': {
+        return {
+          ...state,
+          busy: true
+        }
+      }
+      case 'add': {
+        return {
+          ...state,
+          busy: false,
+          count: state.count + 1
+        }
+      }
+      case 'message': {
+        console.log(`from cs ${action.type} : ${action.payload}`.yellow());
+        return state;
+      }
+      case 'json': {
+        console.log(action);
+        return state;
+      }
+      default:
+        console.log(action);
+        return state;
+    }
+  }
+  
+  var newID = await SquidJS.createStore(initialState, reducer);
+
+  window.location.reload();
+})();
+
+const dispatch = SquidJS.useDispatch;
+SquidJS.createAsyncDispatch();
+
+const sleep = waitTime => new Promise( resolve => setTimeout(resolve, waitTime) );
+const click_test = async () => {
+  dispatch({ type:'busy' });
+  await sleep( 3000 );
+  dispatch({ type:'add', payload:'payload' });
+}
+const click_async = async () => {
+  dispatch({ type:'busy' });
+  await SquidJS.callProcess({
+    com : "dotnet",
+    args : `script ./test.csx`,
+    window : true,
+    callback : ()=>{ dispatch({ type:'add', payload:'payload' }) }
+  });
+}
+
+SquidJS.useSelector = (state) => {
+  document.getElementById("cnt").textContent = state.count;
+};
+
+
+// addEventListener DOMContentLoaded
+window.addEventListener('DOMContentLoaded', async () =>{
+  console.log('DOMContentLoaded');
+});
+
+
+</script>
+</html>

@@ -13,7 +13,7 @@
   </div>
 </body>
 
-<script>
+<script async>
 /* order of events.
 
 EnsureCoreWebView2Async()
@@ -34,51 +34,55 @@ webView_NavigationCompleted()
  'NavigationCompleted'
 
 */
+try {
+  console.log('html script start');
+  if(!window.chrome.webview) throw new Error('webview not found');
 
-console.log('html script start');
+  (async () => {
+    // 画面遷移しても持ち越されるscriptの追加登録
+    const id = await chrome.webview.hostObjects.Squid.GetScriptID("test");
+    if(!id) {
+      var newID = await chrome.webview.hostObjects.Squid.AddScript("test", "console.log('added script');");
+      // window.location.reload();
+    }
 
-// addEventListener webview message
-if(window.chrome.webview){
+    //Argsの読み込み
+    console.log("print args".green(), SquidJS.args());
+
+    console.log("set window".green());
+    SquidJS.setWindowState({
+      width : 400,
+      // height : 800,
+      left : 300,
+      top : 0
+    });
+  })();
+
+  // addEventListener webview message
   window.chrome.webview.addEventListener('message', (e) => {
     let json = e.data;
     switch(json.key){
       case "message":
-        console.log(`from cs ${json.key} : ${ConsoleColor.yellow(json.value)}`);
-        break;
-      case "json":
-        console.log(`from cs ${json.key}`);
-        console.log(json.value);
+        console.log(`from cs ${json.key} : ${json.value}`.yellow());
         break;
       default:
         console.log(`from cs ${json.key}`);
         console.log(e);
     }
   });
-}
 
-// addEventListener DOMContentLoaded
-window.addEventListener('DOMContentLoaded', async () =>{
-  console.log('DOMContentLoaded');
-  console.log(SquidJS.args());
+  // addEventListener DOMContentLoaded
+  window.addEventListener('DOMContentLoaded', async () =>{ console.log('DOMContentLoaded'); });
 
-  SquidJS.setWindowState({
-    width : 400,
-    // height : 800,
-    left : 300,
-    top : 0
-  })
+  // addEventListener load
+  window.addEventListener('load', async () =>{ console.log('load'); });
 
-});
+  console.log('html script end');
 
-window.addEventListener('load', async () =>{
-  console.log('load');
-});
+} catch(e) { alert(e) }
 
 // Event
-var test = async function() {
-  chrome.webview.hostObjects.Squid.Navigate("navigated.html");
-}
+const test = async function() { chrome.webview.hostObjects.Squid.Navigate("navigated.html"); }
 
-console.log('html script end');
 </script>
 </html>

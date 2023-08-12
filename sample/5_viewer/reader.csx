@@ -5,8 +5,6 @@ using System.Text.Json.Nodes;
 
 try{
   var node = JsonNode.Parse(Args[0]);
-  int width = node?["width"]?.GetValue<int>() ?? 100;
-  int height = node?["height"]?.GetValue<int>() ?? 100;
   MainAction(node)();
 }catch(Exception e){
   Console.WriteLine(e.ToString());
@@ -18,9 +16,14 @@ static Action MainAction(JsonNode node){
   var pipe = (string)node["pipe"];
   var mmf = (string)node["mmf"];
 
+  var path = (string)node["path"];
+
+  // int width = node?["width"]?.GetValue<int>() ?? 100;
+  // int height = node?["height"]?.GetValue<int>() ?? 100;
+
   Action dst = flag switch {
     "demosaic" => ()=> {
-      using(var mat = new Mat("sample.jpg")) {
+      using(var mat = new Mat(path)) {
         var height = mat.Size(0);
         var width = mat.Size(1);
         using(var mat8 = new Mat(height, width, MatType.CV_8UC1)) 
@@ -43,11 +46,10 @@ static Action MainAction(JsonNode node){
           WriteMMF(mmf, bytes.Select(n => (int)n).ToArray());
         
         }
-
+        WritePipe(pipe, $$""" { "id" : "draw", "width" : {{width}}, "height" : {{height}} } """);
       }
     },
     _=> ()=> {
-      WritePipe(pipe, $$""" { "status" : "null" } """);
     }
   };
 

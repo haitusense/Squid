@@ -29,9 +29,7 @@
 
 <body>
   <div id="stage">
-    <!-- <canvas id="ui-layer" width="480" height="320"></canvas> -->
     <canvas id="canvas" width="160" height="120"></canvas>
-    <!-- <canvas id="background-layer" width="480" height="320"></canvas> -->
   </div>
 </body>
 
@@ -53,7 +51,7 @@ window.addEventListener('DOMContentLoaded', async () =>{
   chrome.webview.hostObjects.Squid.OpenMemoryMap(params.mmf, params.width*params.height);
   chrome.webview.hostObjects.Squid.OpenNamedPipe(params.pipe);
   
-  await SquidJS.drawFromMemoryMap('canvas', 'mono')
+  // await SquidJS.drawFromMemoryMap('canvas', 'mono')
 });
 
 window.addEventListener('load', async () =>{
@@ -100,13 +98,19 @@ window.addEventListener('load', async () =>{
 });
 
 // addEventListener webview message
-SquidJS.setMessageEventListener(async (json) => {
-  console.log(json);
-  if(json.id == "draw"){
-    console.log("draw");  
-    await SquidJS.drawFromMemoryMap('canvas', 'mono')
+window.chrome.webview.addEventListener('message', async (e) => {
+  let json = e.data;
+  switch(json.type){
+    case "message":
+      console.log(`from cs ${json.type} : ${ConsoleColor.yellow(json.payload)}`);
+      break;
+    case "draw":
+      console.log("draw");  
+      await SquidJS.drawFromMemoryMap('canvas', 'mono');
+      break;
+    default:
+      console.log(e);
   }
 });
-
 </script>
 </html>

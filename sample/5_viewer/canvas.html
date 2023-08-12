@@ -10,22 +10,18 @@
 </head>
 
 <style type="text/css">
-  #ui-layer { z-index: 3; }
   #canvas { 
     image-rendering: pixelated;
     position: absolute;
-    z-index: 2; 
+    transform-origin: 0px 0px;
+    z-index: 2;
   }
-  #background-layer { z-index: 1; }
   #stage {
     position: relative;
-    /* border: 2px solid black; */
     transform-origin: 0px 0px;
-    transform: scale(1);
-    margin-left: auto;
-    margin-right: auto;
-    margin-top: 50px;
+    padding: 50px;
   }
+  #stage:focus { outline: none; }
   #stalker {
     pointer-events: none;
     position: fixed;
@@ -39,11 +35,9 @@
 </style>
 
 <body>
-  <div id="stalker">aaa</div>
-  <div id="stage">
-    <!-- <canvas id="ui-layer" width="480" height="320"></canvas> -->
+  <div id="stalker"></div>
+  <div id="stage" tabindex="0">
     <canvas id="canvas"></canvas>
-    <!-- <canvas id="background-layer" width="480" height="320"></canvas> -->
   </div>
 </body>
 
@@ -52,91 +46,94 @@
 const params = {
   pipe : "NamedPipe_canvas",
   mmf : "mmf_canvas",
-  width : 700,
-  height : 700,
+  path : "sample.jpg",
+  width : 640,
+  height : 480,
   maxsize : 2073600 //1920x1080
 };
 
 const cnv_params = {
+  scale_step : 0.2,
   scale : 1,
   bitshift : 0,
-  color : true
+  color : true,
+  scale_up : function(){ this.scale = Math.round( (this.scale + this.scale_step) * 10 ) / 10 },
+  scale_down : function(){ 
+    this.scale = Math.round( (this.scale - this.scale_step) * 10 ) / 10;
+    if(this.scale < this.scale_step) this.scale = this.scale_step;
+  }
 };
-
-// addEventListener DOMContentLoaded
-window.addEventListener('DOMContentLoaded', async () =>{
-  console.log('DOMContentLoaded');
-  chrome.webview.hostObjects.Squid.OpenMemoryMap(params.mmf, params.maxsize);
-  chrome.webview.hostObjects.Squid.OpenNamedPipe(params.pipe);
-  
-  // await SquidJS.drawFromMemoryMap('canvas', 'mono', 0)
-});
 
 window.addEventListener('load', async () =>{
   console.log('load');
-
+  chrome.webview.hostObjects.Squid.OpenMemoryMap(params.mmf, params.maxsize);
+  chrome.webview.hostObjects.Squid.OpenNamedPipe(params.pipe);
   await readRaw();
 
-  canvas.addEventListener('mousewheel', async (event)=>{
-    if (event.shiftKey) {
-      event.preventDefault();
-      console.log(`Shift + ${event.wheelDelta}`);
-      if (event.wheelDelta > 0) {
+  // window.addEventListener('resize', () => {
+  //   let dst = (window.innerWidth - stage.offsetWidth) / 2;
+  //   stage.style.marginLeft = dst > 0 ? dst : 0;
+  // });
+
+  SquidJS.addKeyMouseEvent(stage, 
+  { },
+  async (event, key)=>{
+    switch (key) {
+      case 'MouseLeave':
+        stage.blur();
+        break;
+      case 'MouseEnter':
+        stage.focus();
+        break;
+      case 'MouseMove':
+        const x = Math.trunc((event.clientX - canvas.getBoundingClientRect().left) / cnv_params.scale);
+        const y = Math.trunc((event.clientY - canvas.getBoundingClientRect().top) / cnv_params.scale);
+        const inCnv = 0 <= x && x < params.width && 0 <= y && y < params.height; 
+        window.chrome.webview.postMessage(`(${x},${y}) ${inCnv}`);
+        let dst = null;
+        if(!inCnv) return;
+        if(cnv_params.color){
+          let ctx = canvas.getContext('2d', { alpha: false });
+          let result_rgba = ctx.getImageData(x, y, 1, 1).data;
+          dst = `R${result_rgba[0]},G${result_rgba[1]},B${result_rgba[2]}`
+        }else{
+          let result_mono = await chrome.webview.hostObjects.Squid.ReadMemoryMapSingle(x + y * params.width);
+          dst = `${result_mono}`
+        }
+        stalker.style.transform = `translate(${event.clientX}px, ${event.clientY}px)`
+        stalker.textContent = `(${x},${y}) ${dst}`;
+        break;
+      case 'Shift+WheelUP':
+        event.preventDefault();
         cnv_params.bitshift += 1;
-      } else {
+        await cnv_refresh(true);
+        window.chrome.webview.postMessage(`x${cnv_params.scale} shift ${cnv_params.bitshift}`);
+        break;
+      case 'Shift+WheelDOWN':
+        event.preventDefault();
         cnv_params.bitshift -= 1;
-      }
-      await SquidJS.drawFromMemoryMap('canvas', 'mono', cnv_params.bitshift);
-      // console.log(`bishift ${canvas_bitshift}`)
-      window.chrome.webview.postMessage(`x${cnv_params.scale} shift ${cnv_params.bitshift}`);
-    } else if(event.ctrlKey) {
-      event.preventDefault();
-      console.log(`Ctrl + ${event.wheelDelta}`);
-      if (event.wheelDelta > 0) {
-        cnv_params.scale *= 1.2;
-      } else {
-        cnv_params.scale /= 1.2;
-      }
-      stage.style.transform = `scale(${cnv_params.scale})`;
-      window.chrome.webview.postMessage(`x${cnv_params.scale} shift ${cnv_params.bitshift}`);
-    } else {
-      // console.log(`${event.wheelDelta}`)
+        await cnv_refresh(true);
+        window.chrome.webview.postMessage(`x${cnv_params.scale} shift ${cnv_params.bitshift}`);
+        break;
+      case 'Alt+WheelUP':
+        event.preventDefault();
+        cnv_params.scale_up();
+        await cnv_refresh(false);
+        window.chrome.webview.postMessage(`x${cnv_params.scale} shift ${cnv_params.bitshift}`);
+        break;
+      case 'Alt+WheelDOWN':
+        event.preventDefault();
+        cnv_params.scale_down();
+        await cnv_refresh(false);
+        window.chrome.webview.postMessage(`x${cnv_params.scale} shift ${cnv_params.bitshift}`);
+        break;
+      case 'Alt+KeyC':
+        cnv_params.color = !cnv_params.color;
+        await cnv_refresh(true);
+        break;
+      default:
     }
-
-  });
-
-  canvas.addEventListener('mousemove', async (event) => {
-    // parseInt():バグの温床, ayerX/layerY:非標準
-    let x = Math.trunc(event.layerX / cnv_params.scale);
-    let y = Math.trunc(event.layerY / cnv_params.scale);
-    
-    let dst = null;
-    if(cnv_params.color){
-      let ctx = canvas.getContext('2d', { alpha: false });
-      let result_rgba = ctx.getImageData(x, y, 1, 1).data;
-      dst = `R${result_rgba[0]},G${result_rgba[1]},B${result_rgba[2]}`
-    }else{
-      let result_mono = await chrome.webview.hostObjects.Squid.ReadMemoryMapSingle(x + y * params.width);
-      dst = `${result_mono}`
-    }
-
-    stalker.style.transform = `translate(${event.clientX}px, ${event.clientY}px)`
-    stalker.textContent = `(${x},${y}) ${dst}`;
-    window.chrome.webview.postMessage(`${x} - ${y} ${event.screenX} ${event.screenY}`);
-    // window.chrome.webview.postMessage(`${x} - ${y} : ${result} x${canvas_scale} shift ${canvas_bitshift}`);
-
-  });
-
-  window.addEventListener('keydown', async (event) => {
-    console.log(`key ${event.keyCode}`)
-    // if (event.isComposing || event.keyCode === 229) {
-    //   return;
-    // }
-    if (event.altKey && event.keyCode === 67) {
-      cnv_params.color = !cnv_params.color;
-      await callback()
-    }
-  });
+  })
 
 });
 
@@ -144,29 +141,39 @@ window.addEventListener('load', async () =>{
 SquidJS.setMessageEventListener(async (json) => {
   console.log(json);
   if(json.id == "draw"){
-    console.log("draw");
-    await callback();
+    console.log("cnv_refresh");
+    
+    params.width = json.width;
+    params.height = json.height;
+    await cnv_refresh(true);
   }
 });
 
 const readRaw = async ()=>{
   const squid = chrome.webview.hostObjects.Squid;
   
-  stage.style.width = params.width;
-  stage.style.height = params.height;
-  canvas.width = params.width;
-  canvas.height = params.height;
-
   const args = Object.assign({ flag : "demosaic" }, params);
     await squid.CallProcessAsync(
     "dotnet",
-    `script ./viewer.csx -- ${JSON.stringify(JSON.stringify(args))} `,
-    true,
-    "callback()"
+    `script ./reader.csx -- ${JSON.stringify(JSON.stringify(args))} `,
+    false,
+    null
   );
 }
-const callback = async () => {
-  const squid = chrome.webview.hostObjects.Squid;
+
+const cnv_refresh = async (flag) => {
+  // stage.style.transform = `scale(${cnv_params.scale})`;
+  stage.style.width = params.width * cnv_params.scale;
+  stage.style.height = params.height * cnv_params.scale;
+  canvas.style.transform = `scale(${cnv_params.scale})`;
+
+  const { clientWidth : w , clientHeight : h } =  canvas;
+  if(w !== params.width || h !==  params.height ){
+    canvas.setAttribute( "width", params.width );
+    canvas.setAttribute( "height", params.height );
+  }
+
+  if(!flag) return;
   if(cnv_params.color){
     await SquidJS.drawFromMemoryMap('canvas', 'bayerGR', cnv_params.bitshift)
   }else{
@@ -174,138 +181,5 @@ const callback = async () => {
   }
 }
 
-const setCanvas1 =()=> {
-  const canvas = document.getElementById('canvas');
-  const ctx = canvas.getContext('2d');
-  const image = new Image();
-  const MAX_SCALE = 5;
-  const SCALE_STEP = 0.2;
-  let imageScale = 1, imageScaleIndex = 0;
-
-  let mouseX, mouseY, press = false;
-  let mouseMoveX, mouseMoveY, mouseDragX, mouseDragY;
-
-  let zoomWidth, zoomHeight, zoomLeft = 0, zoomTop = 0;
-  let zoomLeftBuf = 0, zoomTopBuf = 0;
-
-  canvas.addEventListener('mousewheel', canvasZoom);
-  canvas.addEventListener('mouseover', disableScroll);
-  canvas.addEventListener('mouseout', enableScroll);
-
-  canvas.addEventListener('mousedown', function(){
-    // マウスが押下された瞬間の情報を記録
-    zoomLeftBuf = zoomLeft;
-    zoomTopBuf = zoomTop;
-    press = true;
-  });
-  canvas.addEventListener('mouseup', ()=>{ press = false; });
-  canvas.addEventListener('mouseout', ()=>{ press = false; });
-  canvas.addEventListener('mousemove', mouseMove );
-
-  function draw() {
-    image.addEventListener("load", function(){
-      ctx.drawImage(image, zoomLeft, zoomTop, canvas.width / imageScale, canvas.height / imageScale, 0, 0, canvas.width, canvas.height);
-
-      // ctx.font = '30px "arial black"';
-      // ctx.fillStyle = 'white';
-      // ctx.fillText('x' + imageScale.toFixed(1), 390, 300);
-      // ctx.strokeStyle = 'black';
-      // ctx.lineWidth = 2;
-      // ctx.strokeText('x' + imageScale.toFixed(1), 390, 300);
-      
-      // 枠の描画
-      ctx.lineWidth = 3;
-      ctx.strokeRect(0, 0, canvas.width, canvas.height);
-        
-    });
-    image.src = "https://kano.arkoak.com/images/harinezumi.jpg";
-  }
-
-  function canvasZoom(e) {
-    let rect = e.target.getBoundingClientRect();
-    mouseX = e.clientX - rect.left;
-    mouseY = e.clientY - rect.top;
-      
-    if (e.wheelDelta > 0) {
-      imageScaleIndex++;
-      imageScale = 1 + imageScaleIndex * SCALE_STEP;
-      if (imageScale > MAX_SCALE) {
-        imageScale = MAX_SCALE;
-        imageScaleIndex--;
-      } else {
-        zoomWidth = canvas.width / imageScale;
-        zoomHeight = canvas.height / imageScale;
-          
-        zoomLeft += mouseX * SCALE_STEP / (imageScale * (imageScale - SCALE_STEP));
-        zoomLeft = Math.max(0, Math.min(canvas.width - zoomWidth, zoomLeft));
-
-        zoomTop += mouseY * SCALE_STEP / (imageScale * (imageScale - SCALE_STEP));
-        zoomTop = Math.max(0, Math.min(canvas.height - zoomHeight, zoomTop));
-      }
-    } else {
-      imageScaleIndex--;
-      imageScale = 1 + imageScaleIndex * SCALE_STEP;
-      if (imageScale < 1) {
-        imageScale = 1;
-        zoomLeft = 0;
-        zoomTop = 0;
-        imageScaleIndex = 0;
-      } else {
-        zoomWidth = canvas.width / imageScale;
-        zoomHeight = canvas.height / imageScale;
-
-        zoomLeft -= mouseX * SCALE_STEP / (imageScale * (imageScale + SCALE_STEP));
-        zoomLeft = Math.max(0, Math.min(canvas.width - zoomWidth, zoomLeft));
-              
-        zoomTop -= mouseY * SCALE_STEP / (imageScale * (imageScale + SCALE_STEP));
-        zoomTop = Math.max(0, Math.min(canvas.height - zoomHeight, zoomTop));
-      }
-    }
-      
-    draw();
-  }
-
-  function mouseMove(e) {
-    let rect = e.target.getBoundingClientRect();
-    if (press) {
-      // ドラッグ処理
-      mouseDragX = e.clientX - rect.left;
-      mouseDragY = e.clientY - rect.top;
-          
-      zoomLeft = zoomLeftBuf + (mouseMoveX - mouseDragX) / imageScale;
-      zoomLeft = Math.max(0, Math.min(canvas.width - zoomWidth, zoomLeft));
-
-      zoomTop = zoomTopBuf + (mouseMoveY - mouseDragY) / imageScale;
-      zoomTop = Math.max(0, Math.min(canvas.height - zoomHeight, zoomTop));
-      draw();
-    } else {
-      mouseMoveX = e.clientX - rect.left;
-      mouseMoveY = e.clientY - rect.top;    
-    }
-  }
-
-  function disableScroll() {document.addEventListener("mousewheel", scrollControl, { passive: false });}
-  function enableScroll() {document.removeEventListener("mousewheel", scrollControl, { passive: false });}
-  function scrollControl(e) {e.preventDefault();}
-
-  draw();
-}
-
-
-
 </script>
 </html>
-
-<!-- 
-
-    chrome.webview.hostObjects.Squid.OpenMemoryMap("mmf", 10, "int");
-
-  document.getElementById("mermaid").innerHTML = svg;
-  const svgElement = document.getElementById('svg_1');
-  svgElement.setAttribute('height', '100%');
-
-  const squid = chrome.webview.hostObjects.Squid;
-  let result = squid.CallProcessAsync("dotnet", "script ./opencv.csx", "myfunc8_callback()");
-  result.then((res) => { document.getElementById("id8_out").value = "doing"; });
-
- -->

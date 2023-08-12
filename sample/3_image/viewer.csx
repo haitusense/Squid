@@ -47,10 +47,10 @@ static Action MainAction(JsonNode node){
         }
 
       }
-      WritePipe(pipe, $$""" { "status" : true } """);
+      WritePipe(pipe, $$""" {"type" : "csx", "payload" : true } """);
     },
     _=> ()=> {
-      WritePipe(pipe, $$""" { "status" : false } """);
+      WritePipe(pipe, $$""" {"type" : "csx", "payload" : false } """);
     }
   };
 

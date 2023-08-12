@@ -14,11 +14,20 @@ const params = {
 };
 
 // addEventListener webview message
-SquidJS.setMessageEventListener(async (json) => {
-  console.log(json);
-  document.getElementById(json.id).innerHTML = json.svg
+window.chrome.webview.addEventListener('message', (e) => {
+  let json = e.data;
+  switch(json.type){
+    case "message":
+      console.log(`from cs ${json.type} : ${ConsoleColor.yellow(json.payload)}`);
+      break;
+    case "plot":
+      document.getElementById(json.payload.id).innerHTML = json.payload.value;
+      break;
+    default:
+      console.log(`from cs ${json.type}`);
+      console.log(e);
+  }
 });
-
 
 window.addEventListener('DOMContentLoaded', async () =>{
   chrome.webview.hostObjects.Squid.OpenNamedPipe(params.pipe);

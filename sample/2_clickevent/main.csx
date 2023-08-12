@@ -10,12 +10,11 @@ try{
   Console.WriteLine($"key : {op.key}");
   Console.WriteLine($"value : {op.value}");
 
-  WritePipe("NamedPipe", $$""" { "id" : "id4_out", "value" : "start" } """);
-  for (int i = 0; i < 5; i++)
-  {      
+  WritePipe("NamedPipe", $$""" { "type" : "text", "payload" : { "id" : "id4_out", "value" : "start" } } """);
+  for (int i = 0; i < 5; i++) {      
     Thread.Sleep(1000);
     Console.WriteLine(i);
-    WritePipe("NamedPipe", $$""" { "id" : "id4_out", "value" : "cnt {{i}}" } """);
+    WritePipe("NamedPipe", $$""" { "type" : "text", "payload" : { "id" : "id4_out", "value" : "cnt {{i}}" } } """);
   }
 
 }catch(Exception e){
