@@ -10,6 +10,7 @@
 
   <ItemGroup>
     <Content Include="image/icon.ico" />
+    <EmbeddedResource Include="resource/*.js" />
   </ItemGroup>
 
   <ItemGroup>

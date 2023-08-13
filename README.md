@@ -57,6 +57,18 @@ If you need to install OpenCV DLLs, you can use chocolatey
 
 ## Description
 
+### options
+
+|option name|shorthand|default|Description|
+|:--|:--|:--|:--|
+|--devtool                |-d|            | Open DevTools (Shift + Ctr + i) |
+|--starturl               |-s| index.html | |
+|--working-directory      |-w|            | |
+|--hostobjects-name       |-o| Squid      | |
+|--no-register-javascript |-r|            | |
+|--args                   |-a| "{}"       | |
+
+
 
 ## note
 

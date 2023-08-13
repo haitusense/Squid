@@ -81,6 +81,8 @@ public class SquidView {
   protected internal MemoryMap memoryMap;
   protected internal Pipe pipe = new Pipe();
 
+  protected internal Dictionary<string, string> id = new Dictionary<string, string>();
+
   private SquidView() { }
 
   protected internal static async Task<SquidView> Build(MainWindow window, Microsoft.Web.WebView2.Wpf.WebView2 webView, string key, string comment = "SquidView.Build"){
@@ -91,6 +93,12 @@ public class SquidView {
     webView.CoreWebView2.AddHostObjectToScript(key, obj);
     return obj;
   }
+
+
+  public byte[] ReadAllBytes(string path) => System.IO.File.ReadAllBytes(path);
+
+  public string ReadAllText(string path) => System.IO.File.ReadAllText(path);
+
 
   /* background */
   // protected internal void RunPipe(MainWindow obj, string name){
@@ -302,13 +310,26 @@ public class SquidView {
 
 
 
-  Dictionary<string, string> id = new Dictionary<string, string>();
   public string GetScriptID(string key) {
     return id.ContainsKey(key) switch {
       true => id[key],
       false => null,
     };
   }
+
+  public async Task<string> AddScriptFromResource() {
+    var assembly = System.Reflection.Assembly.GetExecutingAssembly();
+
+    foreach( var i in assembly.GetManifestResourceNames().ToList().FindAll(n => n.EndsWith(".js")) ) {
+      using(var stream = assembly.GetManifestResourceStream(i))
+      using(var streamReader = new System.IO.StreamReader(stream)) {
+        await this.AddScript(i, streamReader.ReadToEnd());
+        await webView.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync($$""" console.log(" {{i}}") """);
+      }
+    }
+    return "";
+  }
+
   public async Task<string> AddScript(string key, string code) {
     if(id.ContainsKey(key)) { 
       webView.CoreWebView2.RemoveScriptToExecuteOnDocumentCreated(id[key]);

@@ -4,7 +4,7 @@ namespace Squid;
 
 class Options {
 
-  [Option('d', "devtool", Required = false, Default = false)]
+  [Option('d', "devtool", Required = false)]
   public bool devtool { get; set; }
 
   [Option('s', "starturl", Required = false, Default = @"index.html")]
@@ -15,6 +15,9 @@ class Options {
 
   [Option('o', "hostobjects-name", Required = false, Default = "Squid")]
   public string hostobjects { get; set; }
+
+  [Option('r', "no-register-javascript", Required = false)]
+  public bool registjs { get; set; }
 
   // urlエンコードしてのurlパラメータ渡しはあまりキレイでないので
   [Option('a', "args", Required = false, Default = "{}")]

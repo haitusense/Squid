@@ -40,14 +40,24 @@ public partial class MainWindow : Window {
     webView.CoreWebView2.WebMessageReceived += MessageReceived;
 
     /* jsで使用するクラスの登録 */
-    squid = await SquidView.Build(this, webView, op.hostobjects, "loading : add objs form cs".Yellow());
+    squid = await SquidView.Build(this, webView, op.hostobjects, "loading : host objects form cs".Yellow());
 
     /* jsで使用するjs scriptの登録 */
-    await webView.AddJavascriptAsync(op.args, "loading : add scripts form cs".Yellow());
+    await squid.AddScript("main", $$"""
+      console.log('{{ "loading : javascripts form cs".Yellow() }}');
+      const SquidJS = {
+        hostObj : chrome.webview.hostObjects.Squid,
+        args : function() { return JSON.parse('{{ op.args }}'); }
+      };
+    """);
+
+    if(!op.registjs){
+            // await squid.AddScriptFromResource("Squid.resource.test.js");
+      await squid.AddScriptFromResource();
+    }
     squid.setTitleAct = (n) =>{ this.Title = n; };
     // var label = this.FindName("statusLabel") as System.Windows.Controls.Label;
     // squid.setStatAct = (n) =>{ label.Content = n; };
-
 
     /* 画面遷移 */
     // await webView.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(""" console.log("navigate in cs") """);

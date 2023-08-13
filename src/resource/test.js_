@@ -1,0 +1,37 @@
+SquidJS.setMessageEventListener = (event) => {
+  if(window.chrome.webview){
+    window.chrome.webview.addEventListener('message', (e) => {
+      var json = e.data;
+      switch(json.key){
+        case "message":
+          console.log(`from cs ${json.key} : ${ConsoleColor.yellow(json.value)}`);
+          break;
+        case "json":
+          console.log({ "from cs" : json.key, "value" : json.value});
+          event(json.value);
+          break;
+        default:
+          console.log(e.data);
+      }
+    });
+  }
+}
+
+    
+  /*
+    // action()
+    SquidJS.createAction = function(action) {
+      this.Action = action
+    }
+
+    const count = useSelector((state) => state.count)
+    const dispatch = useDispatch();
+    const increment = () => { dispatch({ type: 'multi', payload: 2 }); }
+  */
+
+        /* DOM が作成されると、すべてのページで実行される */
+
+            /*
+      ExecuteScriptAsync DOMコンテンツが読み込まれたり、ナビゲーション完了後実行する 
+      The injected scriptなので関数ではなく構文など与えると宣言で重複してエラーでる
+    */

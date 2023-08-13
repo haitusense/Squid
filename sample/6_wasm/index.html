@@ -1,0 +1,50 @@
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+</head>
+
+<body>
+  <div>test</div>
+</body>
+
+<script type="module">
+(async () => {
+  const imports = {
+    env: {
+      date_now: Date.now,
+    },
+  }
+  const raw = await chrome.webview.hostObjects.Squid.ReadAllBytes("./sample.wasm");
+  const bin = new Uint8Array(raw);
+  const result = await WebAssembly.instantiate(bin, imports);
+  const { add, get_timestamp } = result.instance.exports;
+  console.log(add(1, 2))
+  console.log(get_timestamp())
+
+  // WebAssembly.instantiate(bin, imports).then(
+  //   (result) => {
+  //     const { add, get_timestamp } = result.instance.exports;
+  //     console.log(add(1, 2))
+  //     console.log(get_timestamp())
+  //   }
+  // );
+
+  const id = await chrome.webview.hostObjects.Squid.GetScriptID("sample.js");
+  if(!id) {
+    const raw_str = await chrome.webview.hostObjects.Squid.ReadAllText("./sample.js");
+    const new_id = await chrome.webview.hostObjects.Squid.AddScript("sample.js", raw_str);
+    console.log(raw_str)
+    console.log(new_id);
+    window.location.reload();
+  }else{
+    
+  }
+  
+
+  
+
+
+})();
+</script>
+
+</html>
