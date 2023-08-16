@@ -1,0 +1,152 @@
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+</head>
+
+<body>
+  <div id="busy">false</div>
+  <div id="cnt">0</div>
+  <div id="url"></div>
+  <div id="drop-zone" style="text-align:center; border: 1px solid; padding: 30px;">
+    <p>drag and drop</p>
+  </div>
+  <progress id="progress" max="100" value="70"></progress>
+  <div>
+    <input type="button" value="Click" onclick="dispatch({ type:'add', payload:'payload' })"/>
+    <input type="button" value="Click" onclick="click_test()"/>
+    <input type="button" value="Click" onclick="click_async()"/>
+
+  </div>
+</body>
+
+<script>
+
+(async () => {
+
+  const sample_id = await chrome.webview.hostObjects.Squid.AddScriptResources(".*\.txt", true);  
+  
+  /* Store */
+  const id = await chrome.webview.hostObjects.Squid.GetScriptID("store");
+  console.log( `store : ${id}` );
+
+  const initialState = { 
+    busy: false,
+    progress: 0,
+    count: 0,
+    url : null,
+  };
+  const reducer = async (state, action) => {
+    console.log(action)
+    switch (action.type) {
+      case 'busy': {
+        return {
+          ...state,
+          busy: true
+        }
+      }
+      case 'add': {
+        return {
+          ...state,
+          busy: false,
+          count: state.count + 1
+        }
+      }
+      case 'message': {
+        console.log(`from cs ${action.type} : ${action.payload}`.yellow());
+        return state;
+      }
+      case 'progress': {
+        console.log("progress :".green(), action);
+        return state;
+      }
+      case 'drop': {
+        return {
+          ...state,
+          url: action.payload
+        }
+      }
+      case 'drag': {
+        return {
+          ...state,
+          url: action.payload == "enter" ? true : false
+        }
+      }
+      default:
+        console.log(action);
+        return state;
+    }
+  }
+
+  // pipeもstoreも初回読み込みのみ登録
+  console.log('regist pipe'.green());
+  const state_pipe = await chrome.webview.hostObjects.Squid.OpenNamedPipe("NamedPipe");
+  console.log( `pipe : ${state_pipe}` );
+  
+  // key名で登録・即時実行, window.location.reload();されても引き継がれる
+  const store_ID = await SquidJS.createStore("store", initialState, reducer);
+  console.log( `store : ${store_ID}` );
+
+  // after create store
+  SquidJS.createAsyncDispatch();
+
+  /* selector */
+  SquidJS.useSelector = (previous, current) => {
+    console.log("selector".red(), previous, current)
+    if(previous.url != current.url)
+      document.getElementById("url").textContent = current.url;
+    if(previous.count != current.count)
+      document.getElementById("cnt").textContent = current.count;
+    if(previous.busy != current.busy)
+      document.getElementById("busy").textContent = current.busy;
+  };
+
+  
+
+
+
+})();
+
+/* dispatcher, Selector */
+const dispatch = SquidJS.useDispatch;
+
+/* event */
+
+const sleep = waitTime => new Promise( resolve => setTimeout(resolve, waitTime) );
+const click_test = async () => {
+  dispatch({ type:'busy' });
+  await sleep( 3000 );
+  dispatch({ type:'add', payload:'payload' });
+}
+const click_async = async () => {
+  dispatch({ type:'busy' });
+  await SquidJS.callProcess({
+    com : "dotnet",
+    args : `script ./test.csx`,
+    window : true,
+    callback : ()=>{ dispatch({ type:'add', payload:'payload' }) }
+  });
+}
+
+/* drag and drop */
+SquidJS.addDDEvent(document.getElementById('drop-zone'), { }, async (event, key)=>{
+  switch (key) {
+    case 'drop':
+      let result = await SquidJS.callProcess({
+        com : "dotnet",
+        args : `script ./main.csx -- GetTitle -u '${event.dataTransfer.getData("text/plain")}'`,
+        window : true,
+        callback : ()=>{ dispatch({ type : 'drop', payload : event.dataTransfer.getData("text/plain") }) }
+      });
+      break;
+    default:
+  }
+});
+
+// addEventListener DOMContentLoaded
+window.addEventListener('DOMContentLoaded', async () =>{
+  console.log('DOMContentLoaded');
+});
+
+
+</script>
+</html>

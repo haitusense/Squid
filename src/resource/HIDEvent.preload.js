@@ -19,3 +19,24 @@ SquidJS.addHIDEvent = function(elem, obj, act) {
   elem.addEventListener('mousemove', async (event) => { await act(event, "MouseMove"); });
 
 }
+
+SquidJS.addDDEvent = function(elem, obj, act) {
+
+  /*
+    発火順 親 -(キャプチャーフェーズ)-> 子 -(バブリングフェーズ)-> 親
+    バブリングフェーズ : addEventListener(,,false)
+    キャプチャーフェーズ : addEventListener(,,true)
+  */
+  document.addEventListener('dragover', function(event) {
+    event.preventDefault();  
+  }, false );
+  document.addEventListener('drop', function(event) {
+    event.preventDefault();
+  }, false);
+  elem.addEventListener('drop', async function(event) {
+    event.stopPropagation(); // イベント伝播をキャンセル
+    event.preventDefault();  // イベントを無効
+    await act(event, 'drop');
+  }, false);
+
+}

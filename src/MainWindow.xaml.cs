@@ -50,10 +50,10 @@ public partial class MainWindow : Window {
         args : function() { return JSON.parse('{{ op.args }}'); }
       };
     """);
+    // await squid.AddScriptResources(@"^Squid.resource.main.js$");
 
     if(!op.registjs){
-            // await squid.AddScriptFromResource("Squid.resource.test.js");
-      await squid.AddScriptFromResource();
+      await squid.AddScriptResources(@"^.*\.preload.js$");
     }
     squid.setTitleAct = (n) =>{ this.Title = n; };
     // var label = this.FindName("statusLabel") as System.Windows.Controls.Label;

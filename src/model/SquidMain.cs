@@ -4,6 +4,7 @@ using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 
 using System.Diagnostics;
 using System.Text.Json;
@@ -101,6 +102,7 @@ public class SquidView {
 
 
   /* background */
+
   // protected internal void RunPipe(MainWindow obj, string name){
   //   pipe = new Task(async () => {
   //     try{
@@ -122,7 +124,7 @@ public class SquidView {
   //   pipe.Start();
   // }
 
-  public void OpenNamedPipe(string name) => pipe.Run(name,
+  public string OpenNamedPipe(string name) => pipe.Run(name,
     (src) => {
       window.Dispatcher.Invoke((Action)(() => {
         this.JsonSendToView(src);
@@ -317,25 +319,35 @@ public class SquidView {
     };
   }
 
-  public async Task<string> AddScriptFromResource() {
+  public async Task<string> AddScriptResources(string reg, bool immediately_invok = false) {
     var assembly = System.Reflection.Assembly.GetExecutingAssembly();
 
-    foreach( var i in assembly.GetManifestResourceNames().ToList().FindAll(n => n.EndsWith(".js")) ) {
+    var paths = assembly.GetManifestResourceNames().ToList().FindAll(n => Regex.IsMatch(n, reg));
+    foreach( var i in paths) {
       using(var stream = assembly.GetManifestResourceStream(i))
       using(var streamReader = new System.IO.StreamReader(stream)) {
-        await this.AddScript(i, streamReader.ReadToEnd());
-        await webView.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync($$""" console.log(" {{i}}") """);
+        var code = streamReader.ReadToEnd();
+        await this.AddScript(i, code);
+        await webView.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync($$""" console.log("invok {{i}}") """);
+        await webView.CoreWebView2.ExecuteScriptAsync($$""" console.log("register {{i}}") """);
+        if(immediately_invok) {
+          await webView.ExecuteScriptAsync(code);
+          await webView.CoreWebView2.ExecuteScriptAsync($$""" console.log("immediately_invok {{i}}") """);
+        }
       }
     }
-    return "";
+    return $"{paths.Count()}";
   }
 
-  public async Task<string> AddScript(string key, string code) {
+  public async Task<string> AddScript(string key, string code, bool immediately_invok = false) {
     if(id.ContainsKey(key)) { 
       webView.CoreWebView2.RemoveScriptToExecuteOnDocumentCreated(id[key]);
       id.Remove(key);
     }
     var result = await webView.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(code);
+    if(immediately_invok) {
+      await webView.ExecuteScriptAsync(code);
+    }
     id.Add(key, result);
     return result;
   }

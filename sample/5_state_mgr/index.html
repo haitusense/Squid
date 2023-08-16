@@ -4,7 +4,9 @@
 </head>
 
 <body>
-  <div id="cnt"></div>
+  <div id="busy">false</div>
+  <div id="cnt">0</div>
+  <progress id="progress" max="100" value="70"></progress>
   <div>
     <input type="button" value="Click" onclick="dispatch({ type:'add', payload:'payload' })"/>
     <input type="button" value="Click" onclick="click_test()"/>
@@ -22,7 +24,7 @@
          │ Call           │   └───┬────┘   ├──────────►│   │ Reducer │   │
          │                │       ▼        │           │   └────┬────┘   │
  ┌─Container──────┐ Input │     Action     │           │        ▼        │
- │                ├──────►│                │           │     NewState    │
+ │  useSelector   ├──────►│                │           │     NewState    │
  └────────────────┘       └────────────────┘           └────────┬────────┘
          ▲                                                      │
          └──────────────────────────────────────────────────────┘
@@ -30,12 +32,30 @@
 */
 
 (async () => {
-  const id1 = await chrome.webview.hostObjects.Squid.GetScriptID("store");
-  const id2 = await chrome.webview.hostObjects.Squid.GetScriptID("initialState");
-  console.log( `${id1} ${id2}` );
-  if(id1) return;
+
+  /* 
+    定型の手動登録、即時実行はoptionをtrue 
+    手動登録する場合は起動option -r で　AddScriptResources(".*\.js", true);
+
+    登録のみのhtml設定するなら
+    const id = await chrome.webview.hostObjects.Squid.GetScriptID("Squid.resource.hoage.txt");
+    if(!id) {
+      await chrome.webview.hostObjects.Squid.AddScriptResources("Squid.resource.hoage.txt", false);  
+      window.location.reload(); // もしくはnavigate
+    }
+  */
+  const sample_id = await chrome.webview.hostObjects.Squid.AddScriptResources(".*\.txt", true);  
   
-  const initialState = { busy: false, count: 0 };
+  /* Store */
+  const id = await chrome.webview.hostObjects.Squid.GetScriptID("store");
+  console.log( `store : ${id}` );
+
+
+  const initialState = { 
+    busy: false,
+    progress: 0,
+    count: 0
+  };
   const reducer = async (state, action) => {
     console.log(action)
     switch (action.type) {
@@ -56,8 +76,8 @@
         console.log(`from cs ${action.type} : ${action.payload}`.yellow());
         return state;
       }
-      case 'json': {
-        console.log(action);
+      case 'progress': {
+        console.log("progress :".green(), action);
         return state;
       }
       default:
@@ -65,14 +85,43 @@
         return state;
     }
   }
-  
-  var newID = await SquidJS.createStore(initialState, reducer);
 
-  window.location.reload();
+  // pipeもstoreも初回読み込みのみ登録
+  console.log('regist pipe'.green());
+  const state_pipe = await chrome.webview.hostObjects.Squid.OpenNamedPipe("NamedPipe");
+  console.log( `pipe : ${state_pipe}` );
+  const state_pipe2 = await chrome.webview.hostObjects.Squid.OpenNamedPipe("NamedPipe2");
+  console.log( `pipe : ${state_pipe2}` );
+  
+  // key名で登録・即時実行, window.location.reload();されても引き継がれる
+  const store_ID = await SquidJS.createStore("store", initialState, reducer);
+  console.log( `store : ${store_ID}` );
+
+  // after create store
+  SquidJS.createAsyncDispatch();
+
+  /* selector */
+  SquidJS.useSelector = (previous, current) => {
+    console.log("selector".red(), previous, current)
+    if(previous.count != current.count)
+      document.getElementById("cnt").textContent = current.count;
+    if(previous.busy != current.busy)
+      document.getElementById("busy").textContent = current.busy;
+  };
+
+  
+  // addEventListener DOMContentLoaded
+  window.addEventListener('DOMContentLoaded', async () =>{
+    console.log('DOMContentLoaded');
+  });
+
+
 })();
 
+/* dispatcher, Selector */
 const dispatch = SquidJS.useDispatch;
-SquidJS.createAsyncDispatch();
+
+/* event */
 
 const sleep = waitTime => new Promise( resolve => setTimeout(resolve, waitTime) );
 const click_test = async () => {
@@ -89,17 +138,6 @@ const click_async = async () => {
     callback : ()=>{ dispatch({ type:'add', payload:'payload' }) }
   });
 }
-
-SquidJS.useSelector = (state) => {
-  document.getElementById("cnt").textContent = state.count;
-};
-
-
-// addEventListener DOMContentLoaded
-window.addEventListener('DOMContentLoaded', async () =>{
-  console.log('DOMContentLoaded');
-});
-
 
 </script>
 </html>

@@ -17,7 +17,9 @@ public class Pipe {
 
   public Pipe() { }
 
-  public void Run(string path, Action<string> Dispatcher, Action<string> Dispatcher2) {
+  public string Run(string path, Action<string> Dispatcher, Action<string> Dispatcher2) {
+    if(this.path is not null) return this.path;
+
     tokenSource = new CancellationTokenSource();
     var token = tokenSource.Token;
 
@@ -47,6 +49,8 @@ public class Pipe {
       if(t.IsCanceled) { }
       Dispatcher2("task end");
     });
+
+    return path;
   }
 
   public async Task Cancel() {

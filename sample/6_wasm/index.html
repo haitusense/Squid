@@ -5,46 +5,108 @@
 
 <body>
   <div>test</div>
+  <canvas id="cnv" width="10px" height="10px"></canvas>
 </body>
 
 <script type="module">
+
+/*
+  cargo install wasm-pack
+  wasm-pack build --target web
+*/
+import init, * as wasm from './wasm_pack.js';
 (async () => {
+  await init();
+  const result = wasm.add(1,5);
+  console.log("wasm_pack.wasm", result);
+})();
+
+/*
+  rustup target add wasm32-wasi
+  cargo build --target wasm32-wasi
+  cargo build --target=wasm32-unknown-unknown --release  
+*/
+let wasm_vanilla = null;
+(async () => {
+  
   const imports = {
     env: {
       date_now: Date.now,
+      console_log: (ptr, len) => {
+        const chars = new Uint16Array(wasm_vanilla.instance.exports.memory.buffer, ptr, len);
+        console.log(String.fromCharCode(...chars));
+      },
     },
+
   }
-  const raw = await chrome.webview.hostObjects.Squid.ReadAllBytes("./sample.wasm");
-  const bin = new Uint8Array(raw);
-  const result = await WebAssembly.instantiate(bin, imports);
-  const { add, get_timestamp } = result.instance.exports;
-  console.log(add(1, 2))
-  console.log(get_timestamp())
 
-  // WebAssembly.instantiate(bin, imports).then(
-  //   (result) => {
-  //     const { add, get_timestamp } = result.instance.exports;
-  //     console.log(add(1, 2))
-  //     console.log(get_timestamp())
-  //   }
-  // );
+  const response = await fetch("./wasm_vanilla.wasm");
+  const bytes = await response.arrayBuffer();
+  /*
+    const raw = await chrome.webview.hostObjects.Squid.ReadAllBytes("./wasm_vanilla.wasm");
+    const bytes = new Uint8Array(raw);
+  */
+  wasm_vanilla = await WebAssembly.instantiate(bytes, imports);
+  const { add, get_timestamp, console_write } = wasm_vanilla.instance.exports;
+  console.log("wasm_vanilla.wasm", add(1, 2))
+  console.log("wasm_vanilla.wasm", get_timestamp())
+  console_write()
+})();
 
+  // const memory = new WebAssembly.Memory({
+  //   initial: 10,
+  //   maximum: 100
+  // });
+
+  // WebAssembly.instantiateStreaming(fetch("memory.wasm"), { js: { mem: memory } })
+  //   .then(obj => {
+  //       const summands = new Uint32Array(memory.buffer);
+  //       for (let i = 0; i < 10; i++) {
+  //         summands[i] = i;
+  //       }
+  //       const sum = obj.instance.exports.accumulate(0, 10);
+  //       console.log(sum);
+  //     });
+
+
+
+/*
+  jsの起動時登録
+*/
+(async () => {
   const id = await chrome.webview.hostObjects.Squid.GetScriptID("sample.js");
   if(!id) {
     const raw_str = await chrome.webview.hostObjects.Squid.ReadAllText("./sample.js");
     const new_id = await chrome.webview.hostObjects.Squid.AddScript("sample.js", raw_str);
-    console.log(raw_str)
-    console.log(new_id);
+    console.log("sample.js", raw_str)
+    console.log("sample.js", new_id);
     window.location.reload();
   }else{
     
   }
-  
-
-  
-
-
 })();
+  
+
+
+
+
+
+
+let ctx = cnv.getContext('2d', { alpha: false });
+let result_rgba = ctx.getImageData(0, 0, 10, 10);
+for (let i = 0; i < 10*10*4; i+=4) {
+  result_rgba.data[i+0] = 255; // red
+  result_rgba.data[i+1] = 0;   // green
+  result_rgba.data[i+2] = 0;   // blue
+  result_rgba.data[i+3] = 255; // a
+}
+ctx.putImageData(result_rgba, 0, 0);
+// imageData.data.set(clamp);
+
+/*
+js 線形メモリ, ArrayBuffer
+*/
+
 </script>
 
 </html>
